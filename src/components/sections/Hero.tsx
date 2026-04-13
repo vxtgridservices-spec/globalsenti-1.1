@@ -5,7 +5,7 @@ import { Link } from "react-router-dom";
 
 export function Hero() {
   return (
-    <section className="relative h-screen w-full overflow-hidden flex items-center">
+    <section className="relative h-screen w-full overflow-hidden flex items-center justify-center">
       {/* Background Image with Overlay */}
       <div className="absolute inset-0 z-0">
         <img
@@ -14,25 +14,25 @@ export function Hero() {
           className="w-full h-full object-cover"
           referrerPolicy="no-referrer"
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-background via-background/80 to-transparent" />
+        <div className="absolute inset-0 bg-background/60" />
       </div>
 
       <div className="container mx-auto px-4 relative z-10">
-        <div className="max-w-3xl space-y-8">
+        <div className="max-w-4xl mx-auto space-y-8 text-center">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] }}
-            className="space-y-6"
+            className="flex flex-col items-center space-y-4"
           >
-            <div className="flex items-center gap-3 text-gold font-bold tracking-[0.5em] uppercase text-xs">
-              <div className="w-12 h-[1px] bg-gold/50" />
-              <span>Security. Resources. Trust.</span>
+            {/* Minimized and brought down slightly */}
+            <div className="flex items-center gap-2 text-gold font-bold tracking-[0.3em] uppercase text-[9px] mt-4">
+              <div className="w-8 h-[1px] bg-gold/50" />
+              <span>Security • Resources • Trust</span>
             </div>
-            <h1 className="text-6xl md:text-8xl lg:text-9xl font-bold text-white leading-[0.95] tracking-tighter font-serif">
+            <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold text-white leading-[1.1] tracking-tight font-serif">
               GLOBAL SECURITY. <br />
-              <span className="text-gold italic font-light">STRATEGIC</span> <br />
-              RESOURCES.
+              <span className="text-gold italic font-light">STRATEGIC</span> RESOURCES.
             </h1>
           </motion.div>
 
@@ -40,24 +40,22 @@ export function Hero() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 1, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
-            className="text-xl md:text-2xl text-muted-foreground max-w-2xl leading-relaxed font-light tracking-wide"
+            className="text-base md:text-lg text-muted-foreground max-w-xl mx-auto leading-relaxed font-light tracking-wide"
           >
-            Delivering secure, compliant, and confidential solutions for governments, 
-            corporations, and private clients in high-value asset protection, 
-            logistics, and international trade.
+            Providing secure, compliant, and confidential solutions for governments 
+            and global corporations in high-value asset protection and international trade.
           </motion.p>
 
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 1, delay: 0.4, ease: [0.22, 1, 0.36, 1] }}
-            className="flex flex-col sm:flex-row gap-6 pt-4"
+            className="flex flex-col sm:flex-row gap-4 pt-2 justify-center"
           >
-            <Button nativeButton={false} size="lg" className="bg-gold hover:bg-gold-light text-background font-bold h-16 px-10 text-sm tracking-[0.2em] group transition-all duration-500 hover:shadow-[0_0_30px_rgba(212,175,55,0.4)]" render={<Link to="/contact" />}>
-              REQUEST PRIVATE CONSULTATION
-              <ArrowRight className="ml-3 w-5 h-5 transition-transform group-hover:translate-x-2" />
+            <Button nativeButton={false} size="sm" className="bg-gold hover:bg-gold-light text-background font-bold h-12 px-6 text-[10px] tracking-[0.2em] transition-all duration-500 hover:shadow-[0_0_20px_rgba(212,175,55,0.3)]" render={<Link to="/contact" />}>
+              REQUEST CONSULTATION
             </Button>
-            <Button nativeButton={false} size="lg" variant="outline" className="border-white/30 text-white hover:bg-white/10 h-16 px-10 text-sm tracking-[0.2em] transition-all duration-500" render={<Link to="/services" />}>
+            <Button nativeButton={false} size="sm" variant="outline" className="border-white/20 text-white hover:bg-white/10 h-12 px-6 text-[10px] tracking-[0.2em] transition-all duration-500" render={<Link to="/services" />}>
               EXPLORE SERVICES
             </Button>
           </motion.div>
