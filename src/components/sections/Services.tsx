@@ -1,52 +1,51 @@
 import { SectionHeader } from "@/src/components/ui/SectionHeader";
+import { Button } from "@/src/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui/card";
-import { Shield, Truck, Gem, BarChart3, Factory, Users, ArrowRight } from "lucide-react";
+import { Shield, Truck, Gem, BarChart3, Factory, Globe, ArrowRight } from "lucide-react";
 import { motion } from "motion/react";
 
 const services = [
   {
-    title: "Security Operations",
+    title: "SECURITY OPERATIONS",
     description: "Risk assessment, asset protection and executive security solutions.",
     icon: Shield,
   },
   {
-    title: "Secure Logistics & Transportation",
+    title: "SECURE LOGISTICS & TRANSPORTATION",
     description: "High-value cargo transport, armored solutions and global logistics.",
     icon: Truck,
   },
   {
-    title: "Commodity Trade",
+    title: "COMMODITY TRADE",
     description: "Facilitating legal and compliant trade in high-value commodities worldwide.",
     icon: Gem,
   },
   {
-    title: "Risk & Intelligence Advisory",
+    title: "RISK & INTELLIGENCE",
     description: "Market intelligence, risk analysis and strategic advisory for informed decisions.",
     icon: BarChart3,
   },
   {
-    title: "Industrial & Specialized Supply",
+    title: "INDUSTRIAL & SPECIALIZED SUPPLY",
     description: "Supplying industrial materials, minerals and infrastructure solutions.",
     icon: Factory,
   },
   {
-    title: "Global Partnerships",
+    title: "GLOBAL PARTNERSHIPS",
     description: "Government, corporate and private sector partnerships.",
-    icon: Users,
+    icon: Globe,
   },
 ];
 
 export function Services() {
   return (
-    <section className="py-24 bg-background relative overflow-hidden">
+    <section className="py-24 bg-background border-t border-white/5">
       <div className="container mx-auto px-4">
-        <SectionHeader
-          subtitle="Our Core Services"
-          title="Strategic Solutions for a Complex World"
-          description="We provide a comprehensive suite of services designed to protect assets, facilitate trade, and provide strategic intelligence."
-        />
+        <div className="text-center mb-16">
+          <h3 className="text-gold font-bold tracking-[0.3em] uppercase text-xs mb-4">OUR CORE SERVICES</h3>
+        </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-8">
           {services.map((service, index) => (
             <motion.div
               key={service.title}
@@ -54,26 +53,23 @@ export function Services() {
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: index * 0.1 }}
               viewport={{ once: true }}
+              className="flex flex-col items-center text-center space-y-6 group cursor-pointer"
             >
-              <Card className="bg-secondary/30 border-white/5 hover:border-gold/50 transition-all duration-500 group cursor-pointer h-full">
-                <CardHeader className="space-y-4">
-                  <div className="w-12 h-12 rounded-lg bg-gold/10 flex items-center justify-center group-hover:bg-gold transition-colors duration-500">
-                    <service.icon className="w-6 h-6 text-gold group-hover:text-background transition-colors duration-500" />
-                  </div>
-                  <CardTitle className="text-xl text-white group-hover:text-gold transition-colors">
-                    {service.title}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <p className="text-muted-foreground leading-relaxed">
-                    {service.description}
-                  </p>
-                  <div className="flex items-center gap-2 text-gold font-bold text-sm tracking-widest uppercase opacity-0 group-hover:opacity-100 transition-all duration-500 transform translate-y-2 group-hover:translate-y-0">
-                    Learn More
-                    <ArrowRight className="w-4 h-4" />
-                  </div>
-                </CardContent>
-              </Card>
+              <div className="w-16 h-16 flex items-center justify-center">
+                <service.icon className="w-10 h-10 text-gold group-hover:scale-110 transition-transform duration-500" strokeWidth={1} />
+              </div>
+              <div className="space-y-3">
+                <h4 className="text-[11px] font-bold text-white tracking-[0.2em] uppercase group-hover:text-gold transition-colors">
+                  {service.title}
+                </h4>
+                <p className="text-muted-foreground text-[10px] leading-relaxed line-clamp-3">
+                  {service.description}
+                </p>
+              </div>
+              <Button variant="link" className="text-gold p-0 h-auto font-bold text-[9px] tracking-[0.2em] uppercase gap-2 hover:gap-4 transition-all">
+                LEARN MORE
+                <ArrowRight className="w-3 h-3" />
+              </Button>
             </motion.div>
           ))}
         </div>

@@ -3,10 +3,8 @@ import { Hero } from "@/src/components/sections/Hero";
 import { Services } from "@/src/components/sections/Services";
 import { Commodities } from "@/src/components/sections/Commodities";
 import { GlobalOperations } from "@/src/components/sections/GlobalOperations";
-import { MarketIntelligence } from "@/src/components/sections/MarketIntelligence";
-import { Partnerships } from "@/src/components/sections/Partnerships";
-import { TrustStrip } from "@/src/components/sections/TrustStrip";
-import { Contact } from "@/src/components/sections/Contact";
+import { BottomGrid } from "@/src/components/sections/BottomGrid";
+import { LogoStrip } from "@/src/components/sections/LogoStrip";
 import { Footer } from "@/src/components/layout/Footer";
 
 export function Home() {
@@ -17,10 +15,8 @@ export function Home() {
       <Services />
       <Commodities />
       <GlobalOperations />
-      <MarketIntelligence />
-      <Partnerships />
-      <TrustStrip />
-      <Contact />
+      <BottomGrid />
+      <LogoStrip />
       <Footer />
     </main>
   );

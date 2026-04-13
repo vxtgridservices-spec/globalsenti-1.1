@@ -1,12 +1,12 @@
-import { Shield, Linkedin, Twitter, Youtube, Mail, Phone, MapPin } from "lucide-react";
+import { Shield, Linkedin, Twitter, Youtube, Mail, Phone, MapPin, Clock, Instagram, Facebook } from "lucide-react";
 import { Link } from "react-router-dom";
 
 export function Footer() {
   return (
     <footer className="bg-background border-t border-white/5 pt-24 pb-12">
       <div className="container mx-auto px-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-16">
-          <div className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-12 mb-16">
+          <div className="space-y-6 lg:col-span-1">
             <div className="flex items-center gap-3 group cursor-pointer">
               <div className="w-12 h-12 bg-gold rounded-full flex items-center justify-center transition-transform duration-500 group-hover:scale-110">
                 <Shield className="text-background w-7 h-7" />
@@ -20,26 +20,21 @@ export function Footer() {
                 </span>
               </div>
             </div>
-            <p className="text-muted-foreground leading-relaxed">
+            <p className="text-muted-foreground text-xs leading-relaxed">
               Delivering security, resources, and logistics solutions with 
-              integrity, precision, and global expertise. Trusted by governments 
-              and corporations worldwide.
+              integrity, precision, and global expertise.
             </p>
-            <div className="flex gap-4">
-              <a href="#" className="w-10 h-10 rounded-full bg-secondary/50 flex items-center justify-center text-white hover:bg-gold hover:text-background transition-all">
-                <Linkedin className="w-5 h-5" />
-              </a>
-              <a href="#" className="w-10 h-10 rounded-full bg-secondary/50 flex items-center justify-center text-white hover:bg-gold hover:text-background transition-all">
-                <Twitter className="w-5 h-5" />
-              </a>
-              <a href="#" className="w-10 h-10 rounded-full bg-secondary/50 flex items-center justify-center text-white hover:bg-gold hover:text-background transition-all">
-                <Youtube className="w-5 h-5" />
-              </a>
+            <div className="flex gap-3">
+              {[Linkedin, Twitter, Youtube, Instagram, Facebook].map((Icon, i) => (
+                <a key={i} href="#" className="w-8 h-8 rounded-full bg-secondary/50 flex items-center justify-center text-white hover:bg-gold hover:text-background transition-all">
+                  <Icon className="w-4 h-4" />
+                </a>
+              ))}
             </div>
           </div>
 
           <div>
-            <h4 className="text-white font-bold uppercase tracking-widest text-xs mb-8">Quick Links</h4>
+            <h4 className="text-white font-bold uppercase tracking-[0.2em] text-[10px] mb-8">QUICK LINKS</h4>
             <ul className="space-y-4">
               {[
                 { name: "Home", href: "/" },
@@ -50,60 +45,82 @@ export function Footer() {
                 { name: "Contact Us", href: "/contact" }
               ].map((item) => (
                 <li key={item.name}>
-                  <Link to={item.href} className="text-muted-foreground hover:text-gold transition-colors">{item.name}</Link>
+                  <Link to={item.href} className="text-muted-foreground hover:text-gold text-xs transition-colors">{item.name}</Link>
                 </li>
               ))}
             </ul>
           </div>
 
           <div>
-            <h4 className="text-white font-bold uppercase tracking-widest text-xs mb-8">Services</h4>
+            <h4 className="text-white font-bold uppercase tracking-[0.2em] text-[10px] mb-8">SERVICES</h4>
             <ul className="space-y-4">
               {[
-                { name: "Security Operations", href: "/services" },
-                { name: "Secure Logistics", href: "/services" },
-                { name: "Commodity Trade", href: "/services" },
-                { name: "Risk & Intelligence", href: "/intelligence" },
-                { name: "Industrial Supply", href: "/services" },
-                { name: "Global Partnerships", href: "/partnerships" }
+                "Security Operations",
+                "Secure Logistics",
+                "Commodity Trade",
+                "Risk & Intelligence",
+                "Industrial Supply",
+                "Global Partnerships"
               ].map((item) => (
-                <li key={item.name}>
-                  <Link to={item.href} className="text-muted-foreground hover:text-gold transition-colors">{item.name}</Link>
+                <li key={item}>
+                  <Link to="/services" className="text-muted-foreground hover:text-gold text-xs transition-colors">{item}</Link>
                 </li>
               ))}
             </ul>
           </div>
 
           <div>
-            <h4 className="text-white font-bold uppercase tracking-widest text-xs mb-8">Contact Information</h4>
+            <h4 className="text-white font-bold uppercase tracking-[0.2em] text-[10px] mb-8">COMMODITIES</h4>
+            <ul className="space-y-4">
+              {[
+                "Gold",
+                "Diamonds",
+                "Crude Oil",
+                "Natural Gas",
+                "Industrial Minerals",
+                "Precious Stones"
+              ].map((item) => (
+                <li key={item}>
+                  <Link to="/industries" className="text-muted-foreground hover:text-gold text-xs transition-colors">{item}</Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div>
+            <h4 className="text-white font-bold uppercase tracking-[0.2em] text-[10px] mb-8">CONTACT INFORMATION</h4>
             <ul className="space-y-6">
               <li className="flex items-start gap-4">
-                <Mail className="text-gold w-5 h-5 shrink-0" />
-                <span className="text-muted-foreground">info@globalsentinelgroup.com</span>
+                <Mail className="text-gold w-4 h-4 shrink-0" />
+                <span className="text-muted-foreground text-xs">info@globalsentinelgroup.com</span>
               </li>
               <li className="flex items-start gap-4">
-                <Phone className="text-gold w-5 h-5 shrink-0" />
-                <span className="text-muted-foreground">+1 (202) 555-0198</span>
+                <Phone className="text-gold w-4 h-4 shrink-0" />
+                <span className="text-muted-foreground text-xs">+1 (202) 555-0198</span>
               </li>
               <li className="flex items-start gap-4">
-                <MapPin className="text-gold w-5 h-5 shrink-0" />
-                <span className="text-muted-foreground">
+                <MapPin className="text-gold w-4 h-4 shrink-0" />
+                <span className="text-muted-foreground text-xs leading-relaxed">
                   1010 Security Tower, Suite 500<br />
                   Washington, DC 20001, USA
                 </span>
+              </li>
+              <li className="flex items-start gap-4">
+                <Clock className="text-gold w-4 h-4 shrink-0" />
+                <span className="text-muted-foreground text-xs">Mon - Fri: 09:00 AM - 06:00 PM</span>
               </li>
             </ul>
           </div>
         </div>
 
         <div className="pt-12 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-6">
-          <p className="text-muted-foreground text-sm">
+          <p className="text-muted-foreground text-[10px] uppercase tracking-widest">
             © 2024 Global Sentinel Group. All Rights Reserved.
           </p>
           <div className="flex gap-8">
-            <a href="#" className="text-muted-foreground hover:text-gold text-sm transition-colors">Privacy Policy</a>
-            <a href="#" className="text-muted-foreground hover:text-gold text-sm transition-colors">Terms of Service</a>
-            <a href="#" className="text-muted-foreground hover:text-gold text-sm transition-colors">Compliance</a>
+            <a href="#" className="text-muted-foreground hover:text-gold text-[10px] uppercase tracking-widest transition-colors">Privacy Policy</a>
+            <a href="#" className="text-muted-foreground hover:text-gold text-[10px] uppercase tracking-widest transition-colors">Terms of Service</a>
+            <a href="#" className="text-muted-foreground hover:text-gold text-[10px] uppercase tracking-widest transition-colors">Compliance</a>
           </div>
         </div>
       </div>

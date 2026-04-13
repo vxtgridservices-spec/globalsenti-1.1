@@ -9,12 +9,15 @@ export function Hero() {
       {/* Background Image with Overlay */}
       <div className="absolute inset-0 z-0">
         <img
-          src="https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&q=80&w=2000"
-          alt="Logistics background"
-          className="w-full h-full object-cover"
+          src="https://images.unsplash.com/photo-1494412519320-aa613dfb7738?auto=format&fit=crop&q=80&w=2000"
+          alt="Cinematic Logistics"
+          className="w-full h-full object-cover scale-105"
           referrerPolicy="no-referrer"
         />
-        <div className="absolute inset-0 bg-background/60" />
+        {/* Multi-layered cinematic overlay */}
+        <div className="absolute inset-0 bg-gradient-to-b from-background/90 via-background/40 to-background/90" />
+        <div className="absolute inset-0 bg-gradient-to-r from-background/80 via-transparent to-background/80" />
+        <div className="absolute inset-0 bg-gold/5 mix-blend-overlay" />
       </div>
 
       <div className="container mx-auto px-4 relative z-10">
@@ -30,9 +33,10 @@ export function Hero() {
               <div className="w-8 h-[1px] bg-gold/50" />
               <span>Security • Resources • Trust</span>
             </div>
-            <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold text-white leading-[1.1] tracking-tight font-serif">
+            <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold text-white leading-[1.1] tracking-tight font-serif drop-shadow-[0_10px_10px_rgba(0,0,0,0.5)]">
               GLOBAL SECURITY. <br />
-              <span className="text-gold italic font-light">STRATEGIC</span> RESOURCES.
+              STRATEGIC RESOURCES. <br />
+              TRUSTED LOGISTICS.
             </h1>
           </motion.div>
 
@@ -59,24 +63,6 @@ export function Hero() {
               EXPLORE SERVICES
             </Button>
           </motion.div>
-        </div>
-      </div>
-
-      {/* Bottom Strip */}
-      <div className="absolute bottom-0 left-0 right-0 bg-background/40 backdrop-blur-md border-t border-white/10 py-6 hidden md:block">
-        <div className="container mx-auto px-4 flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <Globe className="text-gold w-6 h-6" />
-            <span className="text-white font-medium">Global Presence in 40+ Countries</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <ShieldCheck className="text-gold w-6 h-6" />
-            <span className="text-white font-medium">Full Regulatory Compliance</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <Truck className="text-gold w-6 h-6" />
-            <span className="text-white font-medium">Secure High-Value Logistics</span>
-          </div>
         </div>
       </div>
     </section>
