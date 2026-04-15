@@ -13,9 +13,10 @@ import {
 } from "lucide-react";
 import { motion } from "motion/react";
 
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 export function DealRoom() {
+  const navigate = useNavigate();
   const deals = [
     {
       id: "DR-2024-001",
@@ -111,7 +112,10 @@ export function DealRoom() {
                           }`}>
                             {deal.status}
                           </span>
-                          <Button className="bg-white/10 hover:bg-gold hover:text-background text-white font-bold transition-all">
+                          <Button 
+                            className="bg-white/10 hover:bg-gold hover:text-background text-white font-bold transition-all"
+                            onClick={() => navigate("/deal-room/manifest")}
+                          >
                             View Full Manifest <ArrowRight className="ml-2 w-4 h-4" />
                           </Button>
                         </div>
@@ -180,7 +184,10 @@ export function DealRoom() {
               <p className="text-xs text-gray-400 mb-4">
                 If you don't see what you're looking for, our global network can source specific commodities on request.
               </p>
-              <Button className="w-full bg-gold text-background font-bold">
+              <Button 
+                className="w-full bg-gold text-background font-bold"
+                onClick={() => navigate("/contact")}
+              >
                 Request Private Sourcing
               </Button>
             </div>

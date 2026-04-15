@@ -1,0 +1,4 @@
+window.APP_CONFIG = {
+  VITE_SUPABASE_URL: "https://kgcrojvuyzijlgoqpzmt.supabase.co",
+  VITE_SUPABASE_ANON_KEY: "sb_publishable_EaTeSS7wj1_f27mqIce1sg_e8oAP8T1"
+};

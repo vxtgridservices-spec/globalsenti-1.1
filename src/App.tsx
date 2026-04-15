@@ -10,6 +10,7 @@ import { Services } from "./pages/Services";
 import { Industries } from "./pages/Industries";
 import { ClientPortal } from "./pages/ClientPortal";
 import { Dashboard } from "./pages/Dashboard";
+import { AdminDashboard } from "./pages/AdminDashboard";
 import { DealRoom } from "./pages/DealRoom";
 import { Vault } from "./pages/Vault";
 import { Intelligence } from "./pages/Intelligence";
@@ -29,6 +30,7 @@ export default function App() {
         <Route path="/contact" element={<Contact />} />
         <Route path="/portal" element={<ClientPortal />} />
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/admin-dashboard" element={<AdminDashboard />} />
         <Route path="/deal-room" element={<DealRoom />} />
         <Route path="/vault" element={<Vault />} />
       </Routes>
