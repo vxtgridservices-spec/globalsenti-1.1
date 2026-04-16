@@ -316,23 +316,6 @@ export function AdminDeals() {
                 <DialogTitle className="text-2xl font-serif text-gold">Create New Deal Listing</DialogTitle>
               </DialogHeader>
               
-              {profile?.verification_status !== "verified" && (
-                <div className="p-4 rounded-xl bg-red-400/10 border border-red-400/20 mb-4 flex items-start gap-3">
-                  <ShieldAlert className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-sm text-white font-bold">Verification Required</p>
-                    <p className="text-xs text-gray-400">You must be a verified broker to publish deals. Your current status is: <span className="text-gold capitalize">{profile?.verification_status || 'unverified'}</span></p>
-                    <Button 
-                      variant="link" 
-                      className="text-gold p-0 h-auto text-xs font-bold mt-2"
-                      onClick={() => navigate("/verify-broker")}
-                    >
-                      Complete Verification Now
-                    </Button>
-                  </div>
-                </div>
-              )}
-
               <form onSubmit={handleAddDeal} className="space-y-6 py-4 overflow-y-auto max-h-[70vh] pr-2">
                 <div className="space-y-4">
                   <h3 className="text-xs font-bold uppercase tracking-widest text-gold/60 border-b border-white/5 pb-2">Basic Details</h3>
@@ -619,7 +602,7 @@ export function AdminDeals() {
                        <Button 
                         type="submit" 
                         className="bg-gold text-background font-bold w-full h-12"
-                        disabled={isSubmitting || profile?.verification_status !== "verified"}
+                        disabled={isSubmitting}
                       >
                         {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : "Publish Admin Listing"}
                       </Button>
@@ -683,7 +666,9 @@ export function AdminDeals() {
                       <TableCell className="text-white font-bold">{deal.price}</TableCell>
                       <TableCell>
                         <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                          deal.status === 'Available' ? 'bg-green-500/20 text-green-500' : 'bg-blue-500/20 text-blue-500'
+                          deal.status === 'Available' ? 'bg-green-500/20 text-green-500' : 
+                          deal.status === 'Under Review' ? 'bg-yellow-500/20 text-yellow-500' :
+                          'bg-blue-500/20 text-blue-500'
                         }`}>
                           {deal.status}
                         </span>

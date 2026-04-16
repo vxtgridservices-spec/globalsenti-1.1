@@ -12,6 +12,7 @@ import { ClientPortal } from "./pages/ClientPortal";
 import { Dashboard } from "./pages/Dashboard";
 import { AdminDashboard } from "./pages/admin/AdminDashboard";
 import { AdminDeals } from "./pages/admin/AdminDeals";
+import { BrokerDealsReview } from "./pages/admin/BrokerDealsReview";
 import { AdminRequests } from "./pages/admin/AdminRequests";
 import { AdminUsers } from "./pages/admin/AdminUsers";
 import { AdminDocuments } from "./pages/admin/AdminDocuments";
@@ -44,6 +45,7 @@ export default function App() {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/admin" element={<AdminDashboard />} />
         <Route path="/admin/deals" element={<AdminDeals />} />
+        <Route path="/admin/broker-reviews" element={<BrokerDealsReview />} />
         <Route path="/admin/requests" element={<AdminRequests />} />
         <Route path="/admin/verifications" element={<AdminVerifications />} />
         <Route path="/admin/users" element={<AdminUsers />} />

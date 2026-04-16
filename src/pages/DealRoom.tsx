@@ -46,6 +46,7 @@ export function DealRoom() {
         const { data: dealsData, error } = await supabase
           .from('deals')
           .select('*, profiles:broker_id(tier)')
+          .eq('status', 'Available')
           .order('created_at', { ascending: false });
         
         if (error) throw error;
@@ -76,6 +77,7 @@ export function DealRoom() {
           const seedDeals = [
             {
               id: "DR-2024-001",
+              source_type: "admin",
               type: "Gold",
               title: "AU Bullion - 500kg Spot",
               location: "Dubai, UAE",
@@ -88,18 +90,20 @@ export function DealRoom() {
             },
             {
               id: "DR-2024-002",
+              source_type: "admin",
               type: "Diamonds",
               title: "Rough Diamonds - 12,000 Carats",
               location: "Antwerp, Belgium",
               purity: "Mixed Clarity",
               quantity: "12,000 Carats",
               price: "Private Offer",
-              status: "Under Review",
+              status: "Available",
               commodityType: "Rough Diamonds",
               created_at: new Date().toISOString()
             },
             {
               id: "DR-2024-003",
+              source_type: "admin",
               type: "Crude Oil",
               title: "Bonny Light Crude - 2M Barrels",
               location: "Nigeria",
@@ -112,6 +116,7 @@ export function DealRoom() {
             },
             {
               id: "DR-2024-004",
+              source_type: "admin",
               type: "Natural Gas",
               title: "LNG Supply - 50,000 MT",
               location: "Qatar",
@@ -124,18 +129,20 @@ export function DealRoom() {
             },
             {
               id: "DR-2024-005",
+              source_type: "admin",
               type: "Industrial Minerals",
               title: "Rare Earth Minerals - 5,000 MT",
               location: "Australia",
               purity: "High Grade",
               quantity: "5,000 MT",
               price: "Negotiable",
-              status: "Under Review",
+              status: "Available",
               commodityType: "Rare Earth Minerals",
               created_at: new Date().toISOString()
             },
             {
               id: "DR-2024-006",
+              source_type: "admin",
               type: "Precious Stones",
               title: "Mixed Gemstones - 8,000 Carats",
               location: "Sri Lanka",

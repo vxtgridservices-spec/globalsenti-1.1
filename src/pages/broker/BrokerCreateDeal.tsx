@@ -25,7 +25,7 @@ export function BrokerCreateDeal() {
     quantity: "",
     purity: "",
     price: "",
-    status: "Available",
+    status: "Under Review",
     commodityType: "Gold Bullion",
     origin: "",
     form: "",

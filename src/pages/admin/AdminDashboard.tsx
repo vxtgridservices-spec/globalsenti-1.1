@@ -30,15 +30,16 @@ export function AdminDashboard() {
           supabase.from('profiles').select('id', { count: 'exact' })
         ]);
 
-        const [pendingKYCRes] = await Promise.all([
-          supabase.from('profiles').select('id', { count: 'exact' }).eq('kyc_status', 'pending')
+        const [pendingKYCRes, pendingBrokerDealsRes] = await Promise.all([
+          supabase.from('profiles').select('id', { count: 'exact' }).eq('kyc_status', 'pending'),
+          supabase.from('deals').select('id', { count: 'exact' }).eq('status', 'Under Review')
         ]);
 
         setStats([
           { title: "Total Deals", value: dealsRes.count?.toString() || "0", change: "+0%", trend: "up", icon: Briefcase, color: "text-blue-400" },
           { title: "Active Requests", value: requestsRes.count?.toString() || "0", change: "+0%", trend: "up", icon: MessageSquare, color: "text-gold" },
-          { title: "Verified Users", value: usersRes.count?.toString() || "0", change: "+0%", trend: "up", icon: Users, color: "text-green-400" },
-          { title: "Pending KYC", value: pendingKYCRes.count?.toString() || "0", change: "+0%", trend: "down", icon: ShieldCheck, color: "text-red-400" },
+          { title: "Pending Reviews", value: pendingBrokerDealsRes.count?.toString() || "0", change: "+0%", trend: "up", icon: ShieldCheck, color: "text-yellow-400" },
+          { title: "Pending KYC", value: pendingKYCRes.count?.toString() || "0", change: "+0%", trend: "down", icon: Users, color: "text-red-400" },
         ]);
       } catch (error) {
         console.error("Error fetching stats:", error);
