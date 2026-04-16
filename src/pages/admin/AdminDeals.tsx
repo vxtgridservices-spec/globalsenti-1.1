@@ -61,7 +61,7 @@ export function AdminDeals() {
     purity: "",
     title: "",
     origin: "",
-    commodity_form: "",
+    form: "",
     documents: [] as { name: string; size: string; url?: string }[],
     pricing: { type: "Spot", marketPosition: "", currency: "USD", paymentTerms: "MT103 Wire Transfer" },
     logistics: { deliveryTerms: "FOB", shippingPort: "", inspectionAgency: "SGS", insurance: "Included" },
@@ -102,7 +102,7 @@ export function AdminDeals() {
             status: "Available",
             commodityType: "Gold Bullion",
             origin: "Ghana / Mali",
-            commodity_form: "1kg Standard Bars",
+            form: "1kg Standard Bars",
             created_at: new Date().toISOString(),
             pricing: { type: "Spot Purchase", marketPosition: "Market - 2%", currency: "USD", paymentTerms: "MT103 Wire Transfer" },
             logistics: { deliveryTerms: "FOB", shippingPort: "Dubai DXB", inspectionAgency: "SGS", insurance: "Full Transit" },
@@ -122,7 +122,7 @@ export function AdminDeals() {
             status: "Under Review",
             commodityType: "Rough Diamonds",
             origin: "Botswana / Namibia",
-            commodity_form: "Rough Uncut stones",
+            form: "Rough Uncut stones",
             created_at: new Date().toISOString(),
             pricing: { type: "Spot", marketPosition: "Rapaport - 12%", currency: "USD", paymentTerms: "SBLC (Standby LC)" },
             logistics: { deliveryTerms: "CIF", shippingPort: "Antwerp", inspectionAgency: "GIA / HRD", insurance: "Full" },
@@ -142,7 +142,7 @@ export function AdminDeals() {
             status: "Available",
             commodityType: "Crude Oil",
             origin: "Nigeria (NNPC)",
-            commodity_form: "Bulk Liquid",
+            form: "Bulk Liquid",
             created_at: new Date().toISOString(),
             pricing: { type: "Spot", marketPosition: "Platts Dated Brent - $4", currency: "USD", paymentTerms: "MT103 Wire Transfer" },
             logistics: { deliveryTerms: "TTO", shippingPort: "Bonny Terminal", inspectionAgency: "SGS", insurance: "Standard" },
@@ -238,7 +238,6 @@ export function AdminDeals() {
         ...newDeal,
         id: `DR-${Date.now().toString().slice(-6)}`,
         broker_id: user?.id,
-        source_type: "admin",
         created_at: new Date().toISOString(),
         compliance: { kyc: "Verified", aml: "Compliant", sellerStatus: "Direct Supply" },
         documents: newDeal.documents && newDeal.documents.length > 0 ? newDeal.documents : [
@@ -267,7 +266,7 @@ export function AdminDeals() {
         purity: "",
         title: "",
         origin: "",
-        commodity_form: "",
+        form: "",
         documents: [],
         pricing: { type: "Spot", marketPosition: "", currency: "USD", paymentTerms: "MT103 Wire Transfer" },
         logistics: { deliveryTerms: "FOB", shippingPort: "", inspectionAgency: "SGS", insurance: "Included" },
@@ -365,8 +364,8 @@ export function AdminDeals() {
                         required 
                         placeholder="1kg Standard Bars" 
                         className="bg-white/5 border-white/10"
-                        value={newDeal.commodity_form}
-                        onChange={e => setNewDeal({...newDeal, commodity_form: e.target.value})}
+                        value={newDeal.form}
+                        onChange={e => setNewDeal({...newDeal, form: e.target.value})}
                       />
                     </div>
                     <div className="space-y-2">

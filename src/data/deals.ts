@@ -1,7 +1,6 @@
 export interface Deal {
   id: string;
   broker_id?: string;
-  source_type: "admin" | "broker";
   type: string;
   title: string;
   location: string;
@@ -10,7 +9,7 @@ export interface Deal {
   status: "Available" | "Under Review" | "Closed";
   commodityType: string;
   quantity: string;
-  commodity_form: string;
+  form: string;
   origin: string;
   pricing: {
     type: string;
@@ -42,7 +41,6 @@ export const deals: Deal[] = [
   {
     id: "DR-2024-001",
     broker_id: "admin-system",
-    source_type: "admin",
     type: "Gold",
     title: "AU Bullion - 500kg Spot",
     location: "Dubai, UAE",
@@ -51,7 +49,7 @@ export const deals: Deal[] = [
     status: "Available",
     commodityType: "Gold Bullion",
     quantity: "500 Kilograms",
-    commodity_form: "1kg Standard Bars",
+    form: "1kg Standard Bars",
     origin: "Ghana / Mali",
     pricing: {
       type: "Spot Purchase",
@@ -84,7 +82,6 @@ export const deals: Deal[] = [
   },
   {
     id: "DR-2024-002",
-    source_type: "broker",
     type: "Diamonds",
     title: "Rough Diamonds - 12,000 Carats",
     location: "Antwerp, Belgium",
@@ -93,7 +90,7 @@ export const deals: Deal[] = [
     status: "Under Review",
     commodityType: "Rough Diamonds",
     quantity: "12,000 Carats",
-    commodity_form: "Uncut Stones",
+    form: "Uncut Stones",
     origin: "Botswana / Namibia",
     pricing: {
       type: "Contract Sale",
@@ -126,7 +123,6 @@ export const deals: Deal[] = [
   },
   {
     id: "DR-2024-003",
-    source_type: "broker",
     type: "Crude Oil",
     title: "Bonny Light Crude - 2M Barrels",
     location: "Offshore Nigeria",
@@ -135,7 +131,7 @@ export const deals: Deal[] = [
     status: "Available",
     commodityType: "Crude Oil (BLCO)",
     quantity: "2,000,000 Barrels",
-    commodity_form: "Bulk Liquid",
+    form: "Bulk Liquid",
     origin: "Nigeria (NNPC)",
     pricing: {
       type: "Spot Contract",
@@ -168,7 +164,6 @@ export const deals: Deal[] = [
   },
   {
     id: "DR-2024-004",
-    source_type: "broker",
     type: "Natural Gas",
     title: "LNG Supply - 50,000 MT",
     location: "Qatar",
@@ -177,7 +172,7 @@ export const deals: Deal[] = [
     status: "Available",
     commodityType: "Liquefied Natural Gas (LNG)",
     quantity: "50,000 Metric Tons",
-    commodity_form: "Cryogenic Liquid",
+    form: "Cryogenic Liquid",
     origin: "Qatar (QatarEnergy)",
     pricing: {
       type: "Contract Based",
@@ -209,7 +204,6 @@ export const deals: Deal[] = [
   },
   {
     id: "DR-2024-005",
-    source_type: "broker",
     type: "Industrial Minerals",
     title: "Rare Earth Minerals - 5,000 MT",
     location: "Australia",
@@ -218,7 +212,7 @@ export const deals: Deal[] = [
     status: "Under Review",
     commodityType: "Rare Earth Oxides",
     quantity: "5,000 Metric Tons",
-    commodity_form: "Concentrate Powder",
+    form: "Concentrate Powder",
     origin: "Western Australia",
     pricing: {
       type: "Negotiable",
@@ -250,7 +244,6 @@ export const deals: Deal[] = [
   },
   {
     id: "DR-2024-006",
-    source_type: "broker",
     type: "Precious Stones",
     title: "Mixed Gemstones - 8,000 Carats",
     location: "Sri Lanka",
@@ -259,7 +252,7 @@ export const deals: Deal[] = [
     status: "Available",
     commodityType: "Sapphires & Rubies",
     quantity: "8,000 Carats",
-    commodity_form: "Rough & Cut Mix",
+    form: "Rough & Cut Mix",
     origin: "Ratnapura, Sri Lanka",
     pricing: {
       type: "Private Offer",

@@ -45,7 +45,7 @@ export function DealRoom() {
 
         const { data: dealsData, error } = await supabase
           .from('deals')
-          .select('*, profiles:broker_id(tier)')
+          .select('*')
           .eq('status', 'Available')
           .order('created_at', { ascending: false });
         
@@ -53,17 +53,36 @@ export function DealRoom() {
         
         let processedDeals = dealsData || [];
 
+        // If we need broker tiers, we could fetch them here. For now, assume basic or fetch manually
+        const brokerIds = [...new Set(processedDeals.map(d => d.broker_id).filter(Boolean))];
+        let profilesMap: Record<string, any> = {};
+        if (brokerIds.length > 0) {
+          const { data: brokers } = await supabase.from('profiles').select('id, tier, role').in('id', brokerIds);
+          if (brokers) {
+            profilesMap = brokers.reduce((acc, b) => ({ ...acc, [b.id]: b }), {});
+          }
+        }
+
+        const isAdminDeal = (deal: any) => {
+          if (!deal.broker_id) return true; // Seed data
+          return profilesMap[deal.broker_id]?.role === 'admin';
+        };
+
+        const enrichedDeals = processedDeals.map(deal => ({
+          ...deal,
+          is_admin_deal: isAdminDeal(deal),
+          computed_tier: (deal.broker_id && profilesMap[deal.broker_id]?.tier) ? profilesMap[deal.broker_id].tier : 'basic'
+        }));
+
         // Sort priority: Admin deals first, then by tier (elite > premium > verified > basic)
         const tierOrder = { elite: 3, premium: 2, verified: 1, basic: 0 };
-        processedDeals = [...processedDeals].sort((a, b) => {
+        processedDeals = enrichedDeals.sort((a, b) => {
           // Admin deals always first
-          if (a.source_type === 'admin' && b.source_type !== 'admin') return -1;
-          if (a.source_type !== 'admin' && b.source_type === 'admin') return 1;
+          if (a.is_admin_deal && !b.is_admin_deal) return -1;
+          if (!a.is_admin_deal && b.is_admin_deal) return 1;
           
           // Then by tier
-          const tierA = a.profiles?.tier || 'basic';
-          const tierB = b.profiles?.tier || 'basic';
-          return (tierOrder[tierB as keyof typeof tierOrder] || 0) - (tierOrder[tierA as keyof typeof tierOrder] || 0);
+          return (tierOrder[b.computed_tier as keyof typeof tierOrder] || 0) - (tierOrder[a.computed_tier as keyof typeof tierOrder] || 0);
         });
 
         // Optional: Filter private deals (Elite only)
@@ -77,7 +96,6 @@ export function DealRoom() {
           const seedDeals = [
             {
               id: "DR-2024-001",
-              source_type: "admin",
               type: "Gold",
               title: "AU Bullion - 500kg Spot",
               location: "Dubai, UAE",
@@ -86,11 +104,12 @@ export function DealRoom() {
               price: "Market -2%",
               status: "Available",
               commodityType: "Gold Bullion",
+              origin: "Ghana",
+              form: "1kg Standard Bars",
               created_at: new Date().toISOString()
             },
             {
               id: "DR-2024-002",
-              source_type: "admin",
               type: "Diamonds",
               title: "Rough Diamonds - 12,000 Carats",
               location: "Antwerp, Belgium",
@@ -99,11 +118,12 @@ export function DealRoom() {
               price: "Private Offer",
               status: "Available",
               commodityType: "Rough Diamonds",
+              origin: "Botswana",
+              form: "Rough Uncut",
               created_at: new Date().toISOString()
             },
             {
               id: "DR-2024-003",
-              source_type: "admin",
               type: "Crude Oil",
               title: "Bonny Light Crude - 2M Barrels",
               location: "Nigeria",
@@ -112,11 +132,12 @@ export function DealRoom() {
               price: "Spot Contract",
               status: "Available",
               commodityType: "Crude Oil",
+              origin: "Nigeria",
+              form: "Bulk Liquid",
               created_at: new Date().toISOString()
             },
             {
               id: "DR-2024-004",
-              source_type: "admin",
               type: "Natural Gas",
               title: "LNG Supply - 50,000 MT",
               location: "Qatar",
@@ -129,7 +150,6 @@ export function DealRoom() {
             },
             {
               id: "DR-2024-005",
-              source_type: "admin",
               type: "Industrial Minerals",
               title: "Rare Earth Minerals - 5,000 MT",
               location: "Australia",
@@ -142,7 +162,6 @@ export function DealRoom() {
             },
             {
               id: "DR-2024-006",
-              source_type: "admin",
               type: "Precious Stones",
               title: "Mixed Gemstones - 8,000 Carats",
               location: "Sri Lanka",
@@ -164,7 +183,11 @@ export function DealRoom() {
             console.warn("Seeding failed:", insertError);
             setDeals([]); // Fallback to empty if seeding fails
           } else {
-            setDeals(processedDeals);
+            setDeals((insertedData || []).map(deal => ({
+              ...deal,
+              is_admin_deal: true, // Seed deals are admin deals
+              computed_tier: 'basic'
+            })));
           }
         } else {
           setDeals(processedDeals);
@@ -267,18 +290,18 @@ export function DealRoom() {
                                 {deal.type}
                               </span>
                               <span className="text-gray-500 text-xs">ID: {deal.id}</span>
-                              {deal.profiles?.tier && deal.profiles?.tier !== 'basic' && (
+                              {deal.computed_tier && deal.computed_tier !== 'basic' && (
                                 <div className={cn(
                                   "flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider",
-                                  deal.profiles.tier === 'elite' ? "bg-purple-500/20 text-purple-400" :
-                                  deal.profiles.tier === 'premium' ? "bg-amber-500/20 text-amber-400" :
+                                  deal.computed_tier === 'elite' ? "bg-purple-500/20 text-purple-400" :
+                                  deal.computed_tier === 'premium' ? "bg-amber-500/20 text-amber-400" :
                                   "bg-blue-500/20 text-blue-400"
                                 )}>
-                                  {deal.profiles.tier === 'elite' ? <Crown className="w-3 h-3" /> : <Award className="w-3 h-3" />}
-                                  {deal.profiles.tier}
+                                  {deal.computed_tier === 'elite' ? <Crown className="w-3 h-3" /> : <Award className="w-3 h-3" />}
+                                  {deal.computed_tier}
                                 </div>
                               )}
-                              {deal.source_type === 'admin' ? (
+                              {deal.is_admin_deal ? (
                                 <div className="flex items-center gap-1 px-2 py-0.5 rounded bg-blue-500/20 text-blue-400 text-[9px] font-bold uppercase tracking-wider">
                                   <BadgeCheck className="w-3 h-3" /> Direct Supply
                                 </div>

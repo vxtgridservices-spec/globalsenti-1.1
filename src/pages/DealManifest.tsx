@@ -57,7 +57,7 @@ export function DealManifest() {
       head: [["Attribute", "Specification"]],
       body: [
         ["Commodity Type", dealData.commodityType || dealData.type],
-        ["Form / Appearance", dealData.commodity_form],
+        ["Form / Appearance", dealData.form],
         ["Quantity", dealData.quantity],
         ["Purity / Grade", dealData.purity],
         ["Origin", dealData.origin],
@@ -277,6 +277,7 @@ export function DealManifest() {
                     <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border ${getStatusColor(dealData.status)}`}>
                       {dealData.status}
                     </span>
+                    {/* Removed DB source_type check temporarily, would require profile join.
                     {dealData.source_type === 'admin' ? (
                       <span className="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border border-blue-500/50 bg-blue-500/10 text-blue-400 flex items-center gap-1">
                         <BadgeCheck className="w-3 h-3" /> Direct Supply
@@ -286,6 +287,7 @@ export function DealManifest() {
                         <Briefcase className="w-3 h-3" /> Broker Facilitated
                       </span>
                     )}
+                    */}
                     <span className="text-gray-500 text-[10px] font-mono tracking-[0.2em] uppercase">REF: {dealData.id}</span>
                   </div>
                   <h1 className="text-4xl md:text-5xl font-serif text-white leading-tight">{dealData.title}</h1>
@@ -313,7 +315,7 @@ export function DealManifest() {
                 </div>
                 <div>
                   <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-2">Form</p>
-                  <p className="text-lg text-white font-serif">{dealData.commodity_form}</p>
+                  <p className="text-lg text-white font-serif">{dealData.form}</p>
                 </div>
                 <div>
                   <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-2">Origin</p>
