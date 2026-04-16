@@ -3,6 +3,8 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/src/lib/supabase";
 import { Deal } from "@/src/data/deals";
 import { Loader2, ShieldCheck, Lock, FileText, Download, ArrowLeft, CheckCircle2, Globe, Scale, Truck, BadgeCheck, Briefcase, History, FileSearch } from "lucide-react";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 import { PageLayout } from "@/src/components/layout/PageLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui/card";
 import { Button } from "@/src/components/ui/button";
@@ -16,6 +18,169 @@ export function DealManifest() {
   const [loading, setLoading] = React.useState(true);
   const [isPurchaseModalOpen, setIsPurchaseModalOpen] = React.useState(false);
   const [isContactModalOpen, setIsContactModalOpen] = React.useState(false);
+
+  const generatePDF = () => {
+    if (!dealData) return;
+
+    const doc = new jsPDF();
+    const gold: [number, number, number] = [197, 165, 114]; // #C5A572 (Gold brand color relative)
+    const black: [number, number, number] = [20, 20, 20];
+
+    // Header
+    doc.setFillColor(black[0], black[1], black[2]);
+    doc.rect(0, 0, 210, 40, "F");
+    
+    doc.setTextColor(gold[0], gold[1], gold[2]);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(22);
+    doc.text("GLOBAL SENTINEL GROUP", 20, 20);
+    
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.text("CONFIDENTIAL COMMODITY MANIFEST", 20, 30);
+    
+    doc.text(`ID: ${dealData.id}`, 190, 20, { align: "right" });
+    doc.text(`DATE: ${new Date().toLocaleDateString()}`, 190, 30, { align: "right" });
+
+    let currentY = 55;
+
+    // SECTION 1: Commodity Details
+    doc.setTextColor(gold[0], gold[1], gold[2]);
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.text("SECTION 1: COMMODITY SPECIFICATIONS", 20, currentY);
+    currentY += 10;
+    
+    autoTable(doc, {
+      startY: currentY,
+      head: [["Attribute", "Specification"]],
+      body: [
+        ["Commodity Type", dealData.commodityType || dealData.type],
+        ["Form / Appearance", dealData.commodity_form],
+        ["Quantity", dealData.quantity],
+        ["Purity / Grade", dealData.purity],
+        ["Origin", dealData.origin],
+        ["Current Location", dealData.location]
+      ],
+      theme: "striped",
+      headStyles: { fillColor: gold, textColor: black, fontStyle: "bold" },
+      styles: { fontSize: 10, cellPadding: 3 },
+      margin: { left: 20, right: 20 }
+    });
+    
+    currentY = (doc as any).lastAutoTable.finalY + 15;
+
+    // SECTION 2: Pricing
+    doc.setTextColor(gold[0], gold[1], gold[2]);
+    doc.setFontSize(14);
+    doc.text("SECTION 2: PRICING & TERMS", 20, currentY);
+    currentY += 10;
+    
+    autoTable(doc, {
+      startY: currentY,
+      head: [["Financial Field", "Details"]],
+      body: [
+        ["Pricing Type", dealData.pricing.type],
+        ["Market Position", dealData.pricing.marketPosition],
+        ["Currency", dealData.pricing.currency],
+        ["Payment Terms", dealData.pricing.paymentTerms]
+      ],
+      theme: "striped",
+      headStyles: { fillColor: gold, textColor: black, fontStyle: "bold" },
+      styles: { fontSize: 10, cellPadding: 3 },
+      margin: { left: 20, right: 20 }
+    });
+
+    currentY = (doc as any).lastAutoTable.finalY + 15;
+
+    // SECTION 3: Logistics
+    doc.setTextColor(gold[0], gold[1], gold[2]);
+    doc.setFontSize(14);
+    doc.text("SECTION 3: LOGISTICS & DELIVERY", 20, currentY);
+    currentY += 10;
+
+    autoTable(doc, {
+      startY: currentY,
+      head: [["Logistics Component", "Protocol"]],
+      body: [
+        ["Delivery Terms", dealData.logistics.deliveryTerms],
+        ["Shipping Port", dealData.logistics.shippingPort],
+        ["Inspection Agency", dealData.logistics.inspectionAgency],
+        ["Insurance", dealData.logistics.insurance]
+      ],
+      theme: "striped",
+      headStyles: { fillColor: gold, textColor: black, fontStyle: "bold" },
+      styles: { fontSize: 10, cellPadding: 3 },
+      margin: { left: 20, right: 20 }
+    });
+
+    currentY = (doc as any).lastAutoTable.finalY + 15;
+
+    // Check if we need a new page
+    if (currentY > 230) {
+      doc.addPage();
+      currentY = 20;
+    }
+
+    // SECTION 4: Documentation
+    doc.setTextColor(gold[0], gold[1], gold[2]);
+    doc.setFontSize(14);
+    doc.text("SECTION 4: VERIFIED DOCUMENTATION", 20, currentY);
+    currentY += 10;
+
+    const docItems = dealData.documents.map(d => [d.name, d.size]);
+    autoTable(doc, {
+      startY: currentY,
+      head: [["Document Name", "Status / Size"]],
+      body: docItems.length > 0 ? docItems : [["No documents listed", "N/A"]],
+      theme: "plain",
+      headStyles: { fillColor: [240, 240, 240], textColor: black, fontStyle: "bold" },
+      styles: { fontSize: 10 },
+      margin: { left: 20, right: 20 }
+    });
+
+    currentY = (doc as any).lastAutoTable.finalY + 15;
+
+    // SECTION 5: Conditions
+    doc.setTextColor(gold[0], gold[1], gold[2]);
+    doc.setFontSize(14);
+    doc.text("SECTION 5: TRANSACTION CONDITIONS", 20, currentY);
+    currentY += 10;
+
+    autoTable(doc, {
+      startY: currentY,
+      head: [["Condition", "Requirement"]],
+      body: [
+        ["Minimum Order (MOQ)", dealData.conditions.moq],
+        ["Contract Duration", dealData.conditions.contractDuration],
+        ["Exclusivity Terms", dealData.conditions.exclusivity]
+      ],
+      theme: "striped",
+      headStyles: { fillColor: gold, textColor: black, fontStyle: "bold" },
+      styles: { fontSize: 10, cellPadding: 3 },
+      margin: { left: 20, right: 20 }
+    });
+
+    // FOOTER
+    const pageCount = doc.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFillColor(black[0], black[1], black[2]);
+        doc.rect(0, 280, 210, 20, "F");
+        
+        doc.setTextColor(gold[0], gold[1], gold[2]);
+        doc.setFontSize(8);
+        doc.text("CONFIDENTIAL DOCUMENT - GLOBAL SENTINEL GROUP", 105, 288, { align: "center" });
+        
+        doc.setTextColor(150, 150, 150);
+        doc.setFontSize(6);
+        const disclaimer = "This document is property of Global Sentinel Group. Unauthorized distribution, copying, or disclosure is strictly prohibited by law. All data provided is confidential and for intended recipient use only.";
+        doc.text(disclaimer, 105, 293, { align: "center" });
+    }
+
+    doc.save(`Manifest-${dealData.id}.pdf`);
+  };
 
   React.useEffect(() => {
     const fetchDeal = async () => {
@@ -112,6 +277,15 @@ export function DealManifest() {
                     <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border ${getStatusColor(dealData.status)}`}>
                       {dealData.status}
                     </span>
+                    {dealData.source_type === 'admin' ? (
+                      <span className="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border border-blue-500/50 bg-blue-500/10 text-blue-400 flex items-center gap-1">
+                        <BadgeCheck className="w-3 h-3" /> Direct Supply
+                      </span>
+                    ) : (
+                      <span className="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border border-gold/30 bg-gold/10 text-gold flex items-center gap-1">
+                        <Briefcase className="w-3 h-3" /> Broker Facilitated
+                      </span>
+                    )}
                     <span className="text-gray-500 text-[10px] font-mono tracking-[0.2em] uppercase">REF: {dealData.id}</span>
                   </div>
                   <h1 className="text-4xl md:text-5xl font-serif text-white leading-tight">{dealData.title}</h1>
@@ -139,7 +313,7 @@ export function DealManifest() {
                 </div>
                 <div>
                   <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-2">Form</p>
-                  <p className="text-lg text-white font-serif">{dealData.form}</p>
+                  <p className="text-lg text-white font-serif">{dealData.commodity_form}</p>
                 </div>
                 <div>
                   <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-2">Origin</p>
@@ -321,7 +495,10 @@ export function DealManifest() {
                 </div>
 
                 <div className="pt-6 border-t border-background/10 space-y-4">
-                  <button className="flex items-center gap-3 text-background/80 hover:text-background transition-colors text-sm font-bold w-full">
+                  <button 
+                    onClick={generatePDF}
+                    className="flex items-center gap-3 text-background/80 hover:text-background transition-colors text-sm font-bold w-full"
+                  >
                     <Download className="w-4 h-4" /> Download Full Manifest (PDF)
                   </button>
                   <button className="flex items-center gap-3 text-background/80 hover:text-background transition-colors text-sm font-bold w-full">

@@ -18,7 +18,11 @@ import {
   ExternalLink,
   Filter,
   MoreHorizontal,
-  ShieldAlert
+  ShieldAlert,
+  Loader2,
+  BadgeCheck,
+  FileText,
+  CheckCircle2
 } from "lucide-react";
 import { Input } from "@/src/components/ui/input";
 import { 
@@ -40,7 +44,6 @@ import {
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/src/lib/supabase";
 import { Deal } from "@/src/data/deals";
-import { Loader2 } from "lucide-react";
 
 export function AdminDeals() {
   const navigate = useNavigate();
@@ -56,7 +59,13 @@ export function AdminDeals() {
     price: "",
     location: "",
     purity: "",
-    title: ""
+    title: "",
+    origin: "",
+    commodity_form: "",
+    documents: [] as { name: string; size: string; url?: string }[],
+    pricing: { type: "Spot", marketPosition: "", currency: "USD", paymentTerms: "MT103 Wire Transfer" },
+    logistics: { deliveryTerms: "FOB", shippingPort: "", inspectionAgency: "SGS", insurance: "Included" },
+    conditions: { moq: "", contractDuration: "Spot", exclusivity: "Non-Exclusive" }
   });
   const [profile, setProfile] = React.useState<any>(null);
 
@@ -83,6 +92,7 @@ export function AdminDeals() {
         const seedDeals = [
           {
             id: "DR-2024-001",
+            source_type: "admin",
             type: "Gold",
             title: "AU Bullion - 500kg Spot",
             location: "Dubai, UAE",
@@ -91,15 +101,18 @@ export function AdminDeals() {
             price: "Market -2%",
             status: "Available",
             commodityType: "Gold Bullion",
+            origin: "Ghana / Mali",
+            commodity_form: "1kg Standard Bars",
             created_at: new Date().toISOString(),
-            pricing: { type: "Spot", marketPosition: "Market", currency: "USD", paymentTerms: "MT103" },
-            logistics: { deliveryTerms: "FOB", shippingPort: "TBD", inspectionAgency: "SGS", insurance: "Full" },
-            compliance: { kyc: "Required", aml: "Required", sellerStatus: "Verified" },
-            conditions: { moq: "1 unit", contractDuration: "Spot", exclusivity: "None" },
+            pricing: { type: "Spot Purchase", marketPosition: "Market - 2%", currency: "USD", paymentTerms: "MT103 Wire Transfer" },
+            logistics: { deliveryTerms: "FOB", shippingPort: "Dubai DXB", inspectionAgency: "SGS", insurance: "Full Transit" },
+            compliance: { kyc: "Verified", aml: "Compliant", sellerStatus: "Tier-1" },
+            conditions: { moq: "50kg", contractDuration: "Spot", exclusivity: "Non-Exclusive" },
             documents: []
           },
           {
             id: "DR-2024-002",
+            source_type: "admin",
             type: "Diamonds",
             title: "Rough Diamonds - 12,000 Carats",
             location: "Antwerp, Belgium",
@@ -108,15 +121,18 @@ export function AdminDeals() {
             price: "Private Offer",
             status: "Under Review",
             commodityType: "Rough Diamonds",
+            origin: "Botswana / Namibia",
+            commodity_form: "Rough Uncut stones",
             created_at: new Date().toISOString(),
-            pricing: { type: "Spot", marketPosition: "Market", currency: "USD", paymentTerms: "MT103" },
-            logistics: { deliveryTerms: "FOB", shippingPort: "TBD", inspectionAgency: "SGS", insurance: "Full" },
-            compliance: { kyc: "Required", aml: "Required", sellerStatus: "Verified" },
-            conditions: { moq: "1 unit", contractDuration: "Spot", exclusivity: "None" },
+            pricing: { type: "Spot", marketPosition: "Rapaport - 12%", currency: "USD", paymentTerms: "SBLC (Standby LC)" },
+            logistics: { deliveryTerms: "CIF", shippingPort: "Antwerp", inspectionAgency: "GIA / HRD", insurance: "Full" },
+            compliance: { kyc: "Verified", aml: "Compliant", sellerStatus: "Sightholder" },
+            conditions: { moq: "2,000 Carats", contractDuration: "Spot", exclusivity: "Exclusive 30 days" },
             documents: []
           },
           {
             id: "DR-2024-003",
+            source_type: "admin",
             type: "Crude Oil",
             title: "Bonny Light Crude - 2M Barrels",
             location: "Nigeria",
@@ -125,11 +141,13 @@ export function AdminDeals() {
             price: "Spot Contract",
             status: "Available",
             commodityType: "Crude Oil",
+            origin: "Nigeria (NNPC)",
+            commodity_form: "Bulk Liquid",
             created_at: new Date().toISOString(),
-            pricing: { type: "Spot", marketPosition: "Market", currency: "USD", paymentTerms: "MT103" },
-            logistics: { deliveryTerms: "FOB", shippingPort: "TBD", inspectionAgency: "SGS", insurance: "Full" },
-            compliance: { kyc: "Required", aml: "Required", sellerStatus: "Verified" },
-            conditions: { moq: "1 unit", contractDuration: "Spot", exclusivity: "None" },
+            pricing: { type: "Spot", marketPosition: "Platts Dated Brent - $4", currency: "USD", paymentTerms: "MT103 Wire Transfer" },
+            logistics: { deliveryTerms: "TTO", shippingPort: "Bonny Terminal", inspectionAgency: "SGS", insurance: "Standard" },
+            compliance: { kyc: "Verified", aml: "Compliant", sellerStatus: "Government Registered" },
+            conditions: { moq: "1,000,000 Barrels", contractDuration: "Spot / Contract", exclusivity: "Subject to allocation" },
             documents: []
           },
           {
@@ -143,7 +161,7 @@ export function AdminDeals() {
             status: "Available",
             commodityType: "Natural Gas",
             created_at: new Date().toISOString(),
-            pricing: { type: "Spot", marketPosition: "Market", currency: "USD", paymentTerms: "MT103" },
+            pricing: { type: "Spot", marketPosition: "Market", currency: "USD", paymentTerms: "MT103 Wire Transfer" },
             logistics: { deliveryTerms: "FOB", shippingPort: "TBD", inspectionAgency: "SGS", insurance: "Full" },
             compliance: { kyc: "Required", aml: "Required", sellerStatus: "Verified" },
             conditions: { moq: "1 unit", contractDuration: "Spot", exclusivity: "None" },
@@ -160,7 +178,7 @@ export function AdminDeals() {
             status: "Under Review",
             commodityType: "Rare Earth Minerals",
             created_at: new Date().toISOString(),
-            pricing: { type: "Spot", marketPosition: "Market", currency: "USD", paymentTerms: "MT103" },
+            pricing: { type: "Spot", marketPosition: "Market", currency: "USD", paymentTerms: "MT103 Wire Transfer" },
             logistics: { deliveryTerms: "FOB", shippingPort: "TBD", inspectionAgency: "SGS", insurance: "Full" },
             compliance: { kyc: "Required", aml: "Required", sellerStatus: "Verified" },
             conditions: { moq: "1 unit", contractDuration: "Spot", exclusivity: "None" },
@@ -177,7 +195,7 @@ export function AdminDeals() {
             status: "Available",
             commodityType: "Precious Stones",
             created_at: new Date().toISOString(),
-            pricing: { type: "Spot", marketPosition: "Market", currency: "USD", paymentTerms: "MT103" },
+            pricing: { type: "Spot", marketPosition: "Market", currency: "USD", paymentTerms: "MT103 Wire Transfer" },
             logistics: { deliveryTerms: "FOB", shippingPort: "TBD", inspectionAgency: "SGS", insurance: "Full" },
             compliance: { kyc: "Required", aml: "Required", sellerStatus: "Verified" },
             conditions: { moq: "1 unit", contractDuration: "Spot", exclusivity: "None" },
@@ -220,12 +238,14 @@ export function AdminDeals() {
         ...newDeal,
         id: `DR-${Date.now().toString().slice(-6)}`,
         broker_id: user?.id,
+        source_type: "admin",
         created_at: new Date().toISOString(),
-        pricing: { type: "Spot", marketPosition: "Market", currency: "USD", paymentTerms: "MT103" },
-        logistics: { deliveryTerms: "FOB", shippingPort: "TBD", inspectionAgency: "SGS", insurance: "Full" },
-        compliance: { kyc: "Required", aml: "Required", sellerStatus: "Verified" },
-        conditions: { moq: "1 unit", contractDuration: "Spot", exclusivity: "None" },
-        documents: []
+        compliance: { kyc: "Verified", aml: "Compliant", sellerStatus: "Direct Supply" },
+        documents: newDeal.documents && newDeal.documents.length > 0 ? newDeal.documents : [
+          { name: "Full Corporate Offer (FCO)", size: "Verified" },
+          { name: "Draft Contract", size: "Verified" },
+          { name: "KYC Package", size: "Verified" }
+        ]
       };
 
       const { data, error } = await supabase
@@ -245,7 +265,13 @@ export function AdminDeals() {
         price: "",
         location: "",
         purity: "",
-        title: ""
+        title: "",
+        origin: "",
+        commodity_form: "",
+        documents: [],
+        pricing: { type: "Spot", marketPosition: "", currency: "USD", paymentTerms: "MT103 Wire Transfer" },
+        logistics: { deliveryTerms: "FOB", shippingPort: "", inspectionAgency: "SGS", insurance: "Included" },
+        conditions: { moq: "", contractDuration: "Spot", exclusivity: "Non-Exclusive" }
       });
     } catch (error) {
       console.error("Error adding deal:", error);
@@ -307,87 +333,299 @@ export function AdminDeals() {
                 </div>
               )}
 
-              <form onSubmit={handleAddDeal} className="space-y-4 py-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Title</Label>
-                    <Input 
-                      required 
-                      placeholder="e.g. AU Bullion - 500kg Spot" 
-                      className="bg-white/5 border-white/10"
-                      value={newDeal.title}
-                      onChange={e => setNewDeal({...newDeal, title: e.target.value})}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Commodity Type</Label>
-                    <Select 
-                      value={newDeal.type} 
-                      onValueChange={v => setNewDeal({...newDeal, type: v})}
-                    >
-                      <SelectTrigger className="bg-white/5 border-white/10">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="bg-secondary border-white/10 text-white">
-                        <SelectItem value="Gold">Gold</SelectItem>
-                        <SelectItem value="Diamonds">Diamonds</SelectItem>
-                        <SelectItem value="Crude Oil">Crude Oil</SelectItem>
-                        <SelectItem value="Natural Gas">Natural Gas</SelectItem>
-                        <SelectItem value="Industrial Minerals">Industrial Minerals</SelectItem>
-                        <SelectItem value="Precious Stones">Precious Stones</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Location</Label>
-                    <Input 
-                      required 
-                      placeholder="e.g. Dubai, UAE" 
-                      className="bg-white/5 border-white/10"
-                      value={newDeal.location}
-                      onChange={e => setNewDeal({...newDeal, location: e.target.value})}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Quantity</Label>
-                    <Input 
-                      required 
-                      placeholder="e.g. 500kg" 
-                      className="bg-white/5 border-white/10"
-                      value={newDeal.quantity}
-                      onChange={e => setNewDeal({...newDeal, quantity: e.target.value})}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Purity / Spec</Label>
-                    <Input 
-                      required 
-                      placeholder="e.g. 99.99%" 
-                      className="bg-white/5 border-white/10"
-                      value={newDeal.purity}
-                      onChange={e => setNewDeal({...newDeal, purity: e.target.value})}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Price / Discount</Label>
-                    <Input 
-                      required 
-                      placeholder="e.g. Market -2%" 
-                      className="bg-white/5 border-white/10"
-                      value={newDeal.price}
-                      onChange={e => setNewDeal({...newDeal, price: e.target.value})}
-                    />
+              <form onSubmit={handleAddDeal} className="space-y-6 py-4 overflow-y-auto max-h-[70vh] pr-2">
+                <div className="space-y-4">
+                  <h3 className="text-xs font-bold uppercase tracking-widest text-gold/60 border-b border-white/5 pb-2">Basic Details</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Title</Label>
+                      <Input 
+                        required 
+                        placeholder="AU Bullion - 500kg" 
+                        className="bg-white/5 border-white/10"
+                        value={newDeal.title}
+                        onChange={e => setNewDeal({...newDeal, title: e.target.value})}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Commodity Type</Label>
+                      <Select 
+                        value={newDeal.type} 
+                        onValueChange={v => setNewDeal({...newDeal, type: v, commodityType: v === 'Gold' ? 'Gold Bullion' : v})}
+                      >
+                        <SelectTrigger className="bg-white/5 border-white/10">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-secondary border-white/10 text-white">
+                          <SelectItem value="Gold">Gold</SelectItem>
+                          <SelectItem value="Diamonds">Diamonds</SelectItem>
+                          <SelectItem value="Crude Oil">Crude Oil</SelectItem>
+                          <SelectItem value="Natural Gas">Natural Gas</SelectItem>
+                          <SelectItem value="Industrial Minerals">Industrial Minerals</SelectItem>
+                          <SelectItem value="Precious Stones">Precious Stones</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Origin</Label>
+                      <Input 
+                        required 
+                        placeholder="Ghana / Mali" 
+                        className="bg-white/5 border-white/10"
+                        value={newDeal.origin}
+                        onChange={e => setNewDeal({...newDeal, origin: e.target.value})}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Form</Label>
+                      <Input 
+                        required 
+                        placeholder="1kg Standard Bars" 
+                        className="bg-white/5 border-white/10"
+                        value={newDeal.commodity_form}
+                        onChange={e => setNewDeal({...newDeal, commodity_form: e.target.value})}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Location</Label>
+                      <Input 
+                        required 
+                        placeholder="Dubai, UAE" 
+                        className="bg-white/5 border-white/10"
+                        value={newDeal.location}
+                        onChange={e => setNewDeal({...newDeal, location: e.target.value})}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Quantity</Label>
+                      <Input 
+                        required 
+                        placeholder="500kg" 
+                        className="bg-white/5 border-white/10"
+                        value={newDeal.quantity}
+                        onChange={e => setNewDeal({...newDeal, quantity: e.target.value})}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Purity / Spec</Label>
+                      <Input 
+                        required 
+                        placeholder="99.99%" 
+                        className="bg-white/5 border-white/10"
+                        value={newDeal.purity}
+                        onChange={e => setNewDeal({...newDeal, purity: e.target.value})}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Price / Discount</Label>
+                      <Input 
+                        required 
+                        placeholder="Market -2%" 
+                        className="bg-white/5 border-white/10"
+                        value={newDeal.price}
+                        onChange={e => setNewDeal({...newDeal, price: e.target.value})}
+                      />
+                    </div>
                   </div>
                 </div>
-                <DialogFooter className="pt-4">
-                  <Button 
-                    type="submit" 
-                    className="bg-gold text-background font-bold w-full h-12"
-                    disabled={isSubmitting || profile?.verification_status !== "verified"}
-                  >
-                    {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : "Publish Deal Listing"}
-                  </Button>
-                </DialogFooter>
+
+                <div className="space-y-4">
+                  <h3 className="text-xs font-bold uppercase tracking-widest text-gold/60 border-b border-white/5 pb-2">Pricing Structure</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Pricing Type</Label>
+                      <Select 
+                        value={newDeal.pricing?.type} 
+                        onValueChange={v => setNewDeal({...newDeal, pricing: {...newDeal.pricing!, type: v}})}
+                      >
+                        <SelectTrigger className="bg-white/5 border-white/10">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-secondary border-white/10 text-white">
+                          <SelectItem value="Spot">Spot Purchase</SelectItem>
+                          <SelectItem value="Contract">Fixed Contract</SelectItem>
+                          <SelectItem value="Formula">Formula Based</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Market Position</Label>
+                      <Input 
+                        placeholder="Market - 2% Gross" 
+                        className="bg-white/5 border-white/10"
+                        value={newDeal.pricing?.marketPosition}
+                        onChange={e => setNewDeal({...newDeal, pricing: {...newDeal.pricing!, marketPosition: e.target.value}})}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Payment Terms</Label>
+                      <Select 
+                        value={newDeal.pricing?.paymentTerms} 
+                        onValueChange={v => {
+                          const current = newDeal.pricing?.paymentTerms || "";
+                          if (v === "ALL") {
+                            setNewDeal({...newDeal, pricing: {...newDeal.pricing!, paymentTerms: "MT103, SBLC, Escrow, USDT"}});
+                          } else {
+                            setNewDeal({...newDeal, pricing: {...newDeal.pricing!, paymentTerms: v}});
+                          }
+                        }}
+                      >
+                        <SelectTrigger className="bg-white/5 border-white/10">
+                          <SelectValue placeholder="Select Payment Terms" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-secondary border-white/10 text-white">
+                          <SelectItem value="MT103 Wire Transfer">MT103 Wire Transfer</SelectItem>
+                          <SelectItem value="SBLC (Standby LC)">SBLC (Standby LC)</SelectItem>
+                          <SelectItem value="Bank Escrow">Bank Escrow</SelectItem>
+                          <SelectItem value="USDT / USDC">USDT / USDC</SelectItem>
+                          <SelectItem value="ALL">All Above Methods</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <h3 className="text-xs font-bold uppercase tracking-widest text-gold/60 border-b border-white/5 pb-2">Documents</h3>
+                  <div className="grid grid-cols-1 gap-2">
+                    {["Certificate of Origin", "Assay Report", "Export License"].map((docName) => (
+                      <div key={docName} className="flex items-center justify-between p-2 rounded bg-white/5 border border-white/10">
+                        <span className="text-xs text-white">{docName}</span>
+                        <div className="flex items-center gap-2">
+                          {newDeal.documents?.find(d => d.name === docName) && (
+                            <CheckCircle2 className="w-4 h-4 text-green-500" />
+                          )}
+                          <Input 
+                            type="file" 
+                            className="w-32 h-8 text-[10px] bg-transparent border-none"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                const newDoc = { 
+                                  name: docName, 
+                                  size: `${(file.size / 1024 / 1024).toFixed(2)} MB`,
+                                  url: URL.createObjectURL(file) 
+                                };
+                                setNewDeal(prev => ({
+                                  ...prev,
+                                  documents: [...(prev.documents || []).filter(d => d.name !== docName), newDoc]
+                                }));
+                              }
+                            }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                    <Button 
+                      type="button" 
+                      variant="ghost" 
+                      className="text-[10px] text-gold h-8"
+                      onClick={() => {
+                        const demoDocs = [
+                          { name: "FCO", size: "1.0 MB", url: "#" },
+                          { name: "Draft Contract", size: "1.5 MB", url: "#" }
+                        ];
+                        setNewDeal(prev => ({
+                          ...prev,
+                          documents: [...(prev.documents || []), ...demoDocs]
+                        }));
+                      }}
+                    >
+                      <Plus className="w-3 h-3 mr-1" /> Add Demo Docs (Testing)
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <h3 className="text-xs font-bold uppercase tracking-widest text-gold/60 border-b border-white/5 pb-2">Logistics & Delivery</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Delivery Terms</Label>
+                      <Select 
+                        value={newDeal.logistics?.deliveryTerms} 
+                        onValueChange={v => setNewDeal({...newDeal, logistics: {...newDeal.logistics!, deliveryTerms: v}})}
+                      >
+                        <SelectTrigger className="bg-white/5 border-white/10">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-secondary border-white/10 text-white">
+                          <SelectItem value="FOB">FOB (Free On Board)</SelectItem>
+                          <SelectItem value="CIF">CIF (Cost, Insurance, Freight)</SelectItem>
+                          <SelectItem value="EXW">EXW (Ex Works)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Shipping Port</Label>
+                      <Input 
+                        placeholder="Dubai DXB" 
+                        className="bg-white/5 border-white/10"
+                        value={newDeal.logistics?.shippingPort}
+                        onChange={e => setNewDeal({...newDeal, logistics: {...newDeal.logistics!, shippingPort: e.target.value}})}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                       <Label>Inspection Agency / Lab</Label>
+                       <Input 
+                         placeholder="SGS / Alex Stewart" 
+                         className="bg-white/5 border-white/10"
+                         value={newDeal.logistics?.inspectionAgency}
+                         onChange={e => setNewDeal({...newDeal, logistics: {...newDeal.logistics!, inspectionAgency: e.target.value}})}
+                       />
+                    </div>
+                    <div className="space-y-2">
+                       <Label>Insurance Provisions</Label>
+                       <Input 
+                         placeholder="110% CIF Value" 
+                         className="bg-white/5 border-white/10"
+                         value={newDeal.logistics?.insurance}
+                         onChange={e => setNewDeal({...newDeal, logistics: {...newDeal.logistics!, insurance: e.target.value}})}
+                       />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <h3 className="text-xs font-bold uppercase tracking-widest text-gold/60 border-b border-white/5 pb-2">Conditions</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Min Order Quantity (MOQ)</Label>
+                      <Input 
+                        placeholder="50kg" 
+                        className="bg-white/5 border-white/10"
+                        value={newDeal.conditions?.moq}
+                        onChange={e => setNewDeal({...newDeal, conditions: {...newDeal.conditions!, moq: e.target.value}})}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Contract Duration</Label>
+                      <Input 
+                        placeholder="Spot / 12 Months" 
+                        className="bg-white/5 border-white/10"
+                        value={newDeal.conditions?.contractDuration}
+                        onChange={e => setNewDeal({...newDeal, conditions: {...newDeal.conditions!, contractDuration: e.target.value}})}
+                      />
+                    </div>
+                    <div className="space-y-2 col-span-2">
+                      <Label>Exclusivity Terms</Label>
+                      <Input 
+                        placeholder="Non-exclusive until ICPO" 
+                        className="bg-white/5 border-white/10"
+                        value={newDeal.conditions?.exclusivity}
+                        onChange={e => setNewDeal({...newDeal, conditions: {...newDeal.conditions!, exclusivity: e.target.value}})}
+                      />
+                    </div>
+                    <div className="space-y-2 text-right flex items-end col-span-2">
+                       <Button 
+                        type="submit" 
+                        className="bg-gold text-background font-bold w-full h-12"
+                        disabled={isSubmitting || profile?.verification_status !== "verified"}
+                      >
+                        {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : "Publish Admin Listing"}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
               </form>
             </DialogContent>
           </Dialog>

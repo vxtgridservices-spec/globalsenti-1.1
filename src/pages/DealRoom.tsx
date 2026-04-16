@@ -12,7 +12,9 @@ import {
   Info,
   Crown,
   Award,
-  Loader2
+  Loader2,
+  BadgeCheck,
+  Briefcase
 } from "lucide-react";
 import { motion } from "motion/react";
 import { Link, useNavigate } from "react-router-dom";
@@ -50,9 +52,14 @@ export function DealRoom() {
         
         let processedDeals = dealsData || [];
 
-        // Sort by tier: elite > premium > verified > basic/null
+        // Sort priority: Admin deals first, then by tier (elite > premium > verified > basic)
         const tierOrder = { elite: 3, premium: 2, verified: 1, basic: 0 };
         processedDeals = [...processedDeals].sort((a, b) => {
+          // Admin deals always first
+          if (a.source_type === 'admin' && b.source_type !== 'admin') return -1;
+          if (a.source_type !== 'admin' && b.source_type === 'admin') return 1;
+          
+          // Then by tier
           const tierA = a.profiles?.tier || 'basic';
           const tierB = b.profiles?.tier || 'basic';
           return (tierOrder[tierB as keyof typeof tierOrder] || 0) - (tierOrder[tierA as keyof typeof tierOrder] || 0);
@@ -262,6 +269,15 @@ export function DealRoom() {
                                 )}>
                                   {deal.profiles.tier === 'elite' ? <Crown className="w-3 h-3" /> : <Award className="w-3 h-3" />}
                                   {deal.profiles.tier}
+                                </div>
+                              )}
+                              {deal.source_type === 'admin' ? (
+                                <div className="flex items-center gap-1 px-2 py-0.5 rounded bg-blue-500/20 text-blue-400 text-[9px] font-bold uppercase tracking-wider">
+                                  <BadgeCheck className="w-3 h-3" /> Direct Supply
+                                </div>
+                              ) : (
+                                <div className="text-[9px] text-gray-500 font-bold uppercase tracking-wider flex items-center gap-1">
+                                  <Briefcase className="w-3 h-3 text-gold/50" /> Broker Facilitated Deal
                                 </div>
                               )}
                             </div>
