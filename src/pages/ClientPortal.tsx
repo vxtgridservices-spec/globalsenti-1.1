@@ -30,7 +30,29 @@ export function ClientPortal() {
       if (error) {
         alert(error.message);
       } else {
-        navigate("/dashboard");
+        // Fetch user profile to determine correct redirect
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("role, verification_status")
+            .eq("id", user.id)
+            .single();
+
+          console.log("Login User Data:", { role: profile?.role, status: profile?.verification_status });
+
+          if (profile?.role === "admin") {
+            navigate("/admin");
+          } else if (profile?.role === "broker" || profile?.verification_status === "verified") {
+            if (profile?.verification_status === "verified") {
+              navigate("/broker");
+            } else {
+              navigate("/verify-broker");
+            }
+          } else {
+            navigate("/dashboard");
+          }
+        }
       }
     } else {
       // For a platform like this, we might want to handle registration differently

@@ -49,7 +49,7 @@ export function Dashboard() {
       // If user is admin, redirect to admin dashboard (placeholder logic)
       if (profile.role === 'admin') {
         console.log("Admin detected, redirecting to admin dashboard...");
-        navigate("/admin-dashboard"); // Uncommented
+        navigate("/admin");
       }
     };
     checkUser();

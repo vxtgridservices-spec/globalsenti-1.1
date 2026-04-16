@@ -25,15 +25,24 @@ const adminAuth = async (req: express.Request, res: express.Response, next: expr
   // Simple role check (assuming a 'role' column in 'profiles' table)
   const { data: userData, error: profileError } = await supabaseAdmin
     .from("profiles")
-    .select("role")
+    .select("*") // Select all to see what's actually there
     .eq("id", user.id)
     .single();
 
   console.log("Debug - User ID:", user.id);
-  console.log("Debug - Profile Data:", userData);
+  console.log("Debug - Full Profile Data:", JSON.stringify(userData));
   console.log("Debug - Profile Error:", profileError);
 
-  if (userData?.role !== "admin") return res.status(403).json({ error: "Forbidden", debug: { role: userData?.role } });
+  if (profileError || !userData || userData.role !== "admin") {
+    return res.status(403).json({ 
+      error: "Forbidden", 
+      debug: { 
+        role: userData?.role,
+        error: profileError,
+        dataFound: !!userData
+      } 
+    });
+  }
 
   next();
 };

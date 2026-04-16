@@ -9,44 +9,162 @@ import {
   Lock, 
   FileCheck, 
   TrendingUp,
-  Info
+  Info,
+  Crown,
+  Award,
+  Loader2
 } from "lucide-react";
 import { motion } from "motion/react";
-
 import { Link, useNavigate } from "react-router-dom";
+import { supabase } from "@/src/lib/supabase";
+import { Deal } from "@/src/data/deals";
+import { cn } from "@/src/lib/utils";
 
 export function DealRoom() {
   const navigate = useNavigate();
-  const deals = [
-    {
-      id: "DR-2024-001",
-      title: "AU Bullion - 500kg Spot",
-      location: "Dubai, UAE",
-      purity: "99.99%",
-      price: "Market - 2%",
-      status: "Available",
-      type: "Gold"
-    },
-    {
-      id: "DR-2024-002",
-      title: "Rough Diamonds - 12,000 Carats",
-      location: "Antwerp, Belgium",
-      purity: "Mixed Clarity",
-      price: "Private Offer",
-      status: "Under Review",
-      type: "Diamonds"
-    },
-    {
-      id: "DR-2024-003",
-      title: "Crude Oil (BLCO) - 2M Barrels",
-      location: "Offshore Nigeria",
-      purity: "Standard",
-      price: "Platts - $4",
-      status: "Available",
-      type: "Crude Oil"
-    }
-  ];
+  const [deals, setDeals] = React.useState<Deal[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [profile, setProfile] = React.useState<any>(null);
 
+  React.useEffect(() => {
+    const fetchData = async () => {
+      try {
+        let currentUserProfile = null;
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', user.id)
+            .single();
+          currentUserProfile = data;
+          setProfile(data);
+        }
+
+        const { data: dealsData, error } = await supabase
+          .from('deals')
+          .select('*, profiles:broker_id(tier)')
+          .order('created_at', { ascending: false });
+        
+        if (error) throw error;
+        
+        let processedDeals = dealsData || [];
+
+        // Sort by tier: elite > premium > verified > basic/null
+        const tierOrder = { elite: 3, premium: 2, verified: 1, basic: 0 };
+        processedDeals = [...processedDeals].sort((a, b) => {
+          const tierA = a.profiles?.tier || 'basic';
+          const tierB = b.profiles?.tier || 'basic';
+          return (tierOrder[tierB as keyof typeof tierOrder] || 0) - (tierOrder[tierA as keyof typeof tierOrder] || 0);
+        });
+
+        // Optional: Filter private deals (Elite only)
+        const currentUserTier = currentUserProfile?.tier || 'basic';
+        if (currentUserTier !== 'elite') {
+          processedDeals = processedDeals.filter(d => !d.is_private);
+        }
+
+        if (!dealsData || dealsData.length === 0) {
+          // Seed data if empty
+          const seedDeals = [
+            {
+              id: "DR-2024-001",
+              type: "Gold",
+              title: "AU Bullion - 500kg Spot",
+              location: "Dubai, UAE",
+              purity: "99.99%",
+              quantity: "500kg",
+              price: "Market -2%",
+              status: "Available",
+              commodityType: "Gold Bullion",
+              created_at: new Date().toISOString()
+            },
+            {
+              id: "DR-2024-002",
+              type: "Diamonds",
+              title: "Rough Diamonds - 12,000 Carats",
+              location: "Antwerp, Belgium",
+              purity: "Mixed Clarity",
+              quantity: "12,000 Carats",
+              price: "Private Offer",
+              status: "Under Review",
+              commodityType: "Rough Diamonds",
+              created_at: new Date().toISOString()
+            },
+            {
+              id: "DR-2024-003",
+              type: "Crude Oil",
+              title: "Bonny Light Crude - 2M Barrels",
+              location: "Nigeria",
+              purity: "API 35",
+              quantity: "2M Barrels",
+              price: "Spot Contract",
+              status: "Available",
+              commodityType: "Crude Oil",
+              created_at: new Date().toISOString()
+            },
+            {
+              id: "DR-2024-004",
+              type: "Natural Gas",
+              title: "LNG Supply - 50,000 MT",
+              location: "Qatar",
+              purity: "Pipeline Grade",
+              quantity: "50,000 MT",
+              price: "Contract Based",
+              status: "Available",
+              commodityType: "Natural Gas",
+              created_at: new Date().toISOString()
+            },
+            {
+              id: "DR-2024-005",
+              type: "Industrial Minerals",
+              title: "Rare Earth Minerals - 5,000 MT",
+              location: "Australia",
+              purity: "High Grade",
+              quantity: "5,000 MT",
+              price: "Negotiable",
+              status: "Under Review",
+              commodityType: "Rare Earth Minerals",
+              created_at: new Date().toISOString()
+            },
+            {
+              id: "DR-2024-006",
+              type: "Precious Stones",
+              title: "Mixed Gemstones - 8,000 Carats",
+              location: "Sri Lanka",
+              purity: "Certified",
+              quantity: "8,000 Carats",
+              price: "Private Offer",
+              status: "Available",
+              commodityType: "Precious Stones",
+              created_at: new Date().toISOString()
+            }
+          ];
+
+          const { data: insertedData, error: insertError } = await supabase
+            .from('deals')
+            .upsert(seedDeals, { onConflict: 'id' })
+            .select();
+
+          if (insertError) {
+            console.warn("Seeding failed:", insertError);
+            setDeals([]); // Fallback to empty if seeding fails
+          } else {
+            setDeals(processedDeals);
+          }
+        } else {
+          setDeals(processedDeals);
+        }
+      } catch (error) {
+        console.error("Error fetching deals:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+  
   return (
     <PageLayout title="Private Deal Room" subtitle="Exclusive high-value commodity opportunities for verified partners.">
       <div className="container mx-auto px-4 py-12">
@@ -55,76 +173,136 @@ export function DealRoom() {
             <Lock className="text-background w-8 h-8" />
           </div>
           <div>
-            <h3 className="text-xl font-bold text-white mb-2">Verified Access Only</h3>
+            <h3 className="text-xl font-bold text-white mb-2">
+              {profile?.verification_status === "verified" ? "Verified Broker Status" : 
+               profile?.verification_status === "pending" ? "Verification In Progress" :
+               profile?.verification_status === "rejected" ? "Verification Failed" :
+               "Verified Access Only"}
+            </h3>
             <p className="text-gray-400">
-              All listings in this room are subject to strict KYC/AML verification. Documents must be submitted via the 
-              <Link to="/vault" className="text-gold hover:underline mx-1">Document Vault</Link> 
-              before any transaction can proceed.
+              {profile?.verification_status === "verified" ? 
+                "Your account is fully verified. You have access to list commodities and manage private deals." :
+                "All listings in this room are subject to strict KYC/AML verification. Brokers must complete identity verification to list deals."}
             </p>
           </div>
-          <Button className="md:ml-auto bg-gold text-background font-bold whitespace-nowrap">
-            Update Verification
-          </Button>
+          <div className="md:ml-auto flex gap-3">
+            {profile?.verification_status === "verified" ? (
+              <div className="flex flex-col gap-2">
+                <Button 
+                  className="bg-gold text-background font-bold whitespace-nowrap"
+                  onClick={() => {
+                    if (profile?.role === 'admin') navigate("/admin/deals");
+                    else navigate("/broker/deals");
+                  }}
+                >
+                  List Commodity
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="border-gold/30 text-gold text-xs h-8"
+                  onClick={() => {
+                    if (profile?.role === 'admin') navigate("/admin");
+                    else navigate("/broker");
+                  }}
+                >
+                  Switch to {profile?.role === 'admin' ? 'Admin' : 'Broker'} Mode
+                </Button>
+              </div>
+            ) : (
+              <Button 
+                className="bg-gold text-background font-bold whitespace-nowrap"
+                onClick={() => navigate("/verify-broker")}
+              >
+                {profile?.verification_status === "pending" ? "View Status" : 
+                 profile?.verification_status === "rejected" ? "Retry Verification" : 
+                 "Update Verification"}
+              </Button>
+            )}
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-8">
             <h2 className="text-2xl font-serif font-bold text-white mb-6">Active Listings</h2>
-            <div className="space-y-6">
-              {deals.map((deal, index) => (
-                <motion.div
-                  key={deal.id}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.1 }}
-                >
-                  <Card className="bg-white/5 border-white/10 hover:border-gold/50 transition-all group">
-                    <CardContent className="p-6">
-                      <div className="flex flex-col md:flex-row justify-between gap-6">
-                        <div className="space-y-4">
-                          <div className="flex items-center gap-3">
-                            <span className="px-2 py-1 rounded bg-gold/20 text-gold text-[10px] font-bold uppercase tracking-wider">
-                              {deal.type}
+            
+            {loading ? (
+              <div className="flex justify-center py-20">
+                <Loader2 className="w-10 h-10 text-gold animate-spin" />
+              </div>
+            ) : deals.length === 0 ? (
+              <div className="text-center py-20 bg-white/5 rounded-2xl border border-dashed border-white/10">
+                <Info className="w-12 h-12 text-gray-500 mx-auto mb-4" />
+                <p className="text-gray-400 font-serif text-lg">Currently no active deals available</p>
+                <p className="text-gray-500 text-sm mt-2">Please check back later or contact a broker for private sourcing.</p>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {deals.map((deal, index) => (
+                  <motion.div
+                    key={deal.id}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                  >
+                    <Card className="bg-white/5 border-white/10 hover:border-gold/50 transition-all group">
+                      <CardContent className="p-6">
+                        <div className="flex flex-col md:flex-row justify-between gap-6">
+                          <div className="space-y-4">
+                            <div className="flex items-center gap-3">
+                              <span className="px-2 py-1 rounded bg-gold/20 text-gold text-[10px] font-bold uppercase tracking-wider">
+                                {deal.type}
+                              </span>
+                              <span className="text-gray-500 text-xs">ID: {deal.id}</span>
+                              {deal.profiles?.tier && deal.profiles?.tier !== 'basic' && (
+                                <div className={cn(
+                                  "flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider",
+                                  deal.profiles.tier === 'elite' ? "bg-purple-500/20 text-purple-400" :
+                                  deal.profiles.tier === 'premium' ? "bg-amber-500/20 text-amber-400" :
+                                  "bg-blue-500/20 text-blue-400"
+                                )}>
+                                  {deal.profiles.tier === 'elite' ? <Crown className="w-3 h-3" /> : <Award className="w-3 h-3" />}
+                                  {deal.profiles.tier}
+                                </div>
+                              )}
+                            </div>
+                            <h3 className="text-xl font-bold text-white group-hover:text-gold transition-colors">
+                              {deal.title}
+                            </h3>
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                              <div>
+                                <p className="text-[10px] text-gray-500 uppercase tracking-widest">Location</p>
+                                <p className="text-sm text-white">{deal.location}</p>
+                              </div>
+                              <div>
+                                <p className="text-[10px] text-gray-500 uppercase tracking-widest">Purity/Spec</p>
+                                <p className="text-sm text-white">{deal.purity}</p>
+                              </div>
+                              <div>
+                                <p className="text-[10px] text-gray-500 uppercase tracking-widest">Pricing</p>
+                                <p className="text-sm text-gold font-bold">{deal.price}</p>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex flex-col justify-between items-end gap-4">
+                            <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                              deal.status === 'Available' ? 'bg-green-500/20 text-green-500' : 'bg-blue-500/20 text-blue-500'
+                            }`}>
+                              {deal.status}
                             </span>
-                            <span className="text-gray-500 text-xs">ID: {deal.id}</span>
-                          </div>
-                          <h3 className="text-xl font-bold text-white group-hover:text-gold transition-colors">
-                            {deal.title}
-                          </h3>
-                          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                            <div>
-                              <p className="text-[10px] text-gray-500 uppercase tracking-widest">Location</p>
-                              <p className="text-sm text-white">{deal.location}</p>
-                            </div>
-                            <div>
-                              <p className="text-[10px] text-gray-500 uppercase tracking-widest">Purity/Spec</p>
-                              <p className="text-sm text-white">{deal.purity}</p>
-                            </div>
-                            <div>
-                              <p className="text-[10px] text-gray-500 uppercase tracking-widest">Pricing</p>
-                              <p className="text-sm text-gold font-bold">{deal.price}</p>
-                            </div>
+                            <Button 
+                              className="bg-white/10 hover:bg-gold hover:text-background text-white font-bold transition-all"
+                              onClick={() => navigate(`/deal/${deal.id}`)}
+                            >
+                              View Full Manifest <ArrowRight className="ml-2 w-4 h-4" />
+                            </Button>
                           </div>
                         </div>
-                        <div className="flex flex-col justify-between items-end gap-4">
-                          <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                            deal.status === 'Available' ? 'bg-green-500/20 text-green-500' : 'bg-blue-500/20 text-blue-500'
-                          }`}>
-                            {deal.status}
-                          </span>
-                          <Button 
-                            className="bg-white/10 hover:bg-gold hover:text-background text-white font-bold transition-all"
-                            onClick={() => navigate("/deal-room/manifest")}
-                          >
-                            View Full Manifest <ArrowRight className="ml-2 w-4 h-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              ))}
-            </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="space-y-8">
