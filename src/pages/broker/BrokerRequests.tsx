@@ -20,19 +20,25 @@ import {
   Loader2,
   ExternalLink,
   Mail,
-  Phone
+  Phone,
+  MessageCircle
 } from "lucide-react";
 import { supabase } from "@/src/lib/supabase";
+import { DealRoomModal } from "@/src/components/deals/DealModals";
 
 export function BrokerRequests() {
   const [requests, setRequests] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const [selectedRequest, setSelectedRequest] = React.useState<any>(null);
+  const [isChatModalOpen, setIsChatModalOpen] = React.useState(false);
+  const [user, setUser] = React.useState<any>(null);
 
   React.useEffect(() => {
     const fetchRequests = async () => {
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
+        setUser(user);
 
         // 1. Get broker's deals first to find associated requests
         const { data: deals } = await supabase
@@ -87,6 +93,11 @@ export function BrokerRequests() {
     } catch (error) {
       console.error("Error updating request status:", error);
     }
+  };
+
+  const openChat = (req: any) => {
+    setSelectedRequest(req);
+    setIsChatModalOpen(true);
   };
 
   return (
@@ -164,23 +175,26 @@ export function BrokerRequests() {
                       </TableCell>
                       <TableCell>
                         <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-widest ${
-                          req.status === 'approved' ? 'bg-green-500/10 text-green-500' : 
+                          req.status === 'qualified' ? 'bg-green-500/10 text-green-500' : 
                           req.status === 'rejected' ? 'bg-red-500/10 text-red-500' : 
+                          req.status === 'due_diligence' ? 'bg-blue-500/10 text-blue-500' : 
                           'bg-yellow-500/10 text-yellow-500'
                         }`}>
                           {req.status || 'new'}
                         </span>
                       </TableCell>
-                      <TableCell className="text-right">
+                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1">
-                           <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-white" title="Mark as Reviewed" onClick={() => handleStatusUpdate(req.id, 'reviewed')}>
+                           {(req.status === 'qualified' || req.status === 'due_diligence') && (
+                             <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-blue-500" title="Open Deal Room" onClick={() => openChat(req)}>
+                                <MessageCircle className="w-4 h-4" />
+                             </Button>
+                           )}
+                           <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-green-500" title="Qualify Prospect" onClick={() => handleStatusUpdate(req.id, 'qualified')}>
                               <CheckCircle className="w-4 h-4" />
                            </Button>
-                           <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-red-400" title="Archive Lead" onClick={() => handleStatusUpdate(req.id, 'archived')}>
+                           <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-red-400" title="Reject Prospect" onClick={() => handleStatusUpdate(req.id, 'rejected')}>
                               <XCircle className="w-4 h-4" />
-                           </Button>
-                           <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-gold">
-                              <ExternalLink className="w-4 h-4" />
                            </Button>
                         </div>
                       </TableCell>
@@ -192,6 +206,15 @@ export function BrokerRequests() {
           </CardContent>
         </Card>
       </div>
+      
+      {selectedRequest && (
+        <DealRoomModal 
+          isOpen={isChatModalOpen}
+          onClose={() => setIsChatModalOpen(false)}
+          deal={{ id: selectedRequest.deal_id, title: selectedRequest.dealTitle || "Requested Deal", broker_id: user?.id || "unassigned" } as any}
+          userRequest={selectedRequest}
+        />
+      )}
     </BrokerLayout>
   );
 }

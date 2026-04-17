@@ -21,11 +21,14 @@ import {
 } from "lucide-react";
 
 import { supabase } from "@/src/lib/supabase";
-import { Loader2 } from "lucide-react";
+import { Loader2, MessageCircle } from "lucide-react";
+import { DealRoomModal } from "@/src/components/deals/DealModals";
 
 export function AdminRequests() {
   const [requests, setRequests] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const [selectedRequest, setSelectedRequest] = React.useState<any>(null);
+  const [isChatModalOpen, setIsChatModalOpen] = React.useState(false);
 
   const fetchRequests = async () => {
     try {
@@ -47,6 +50,11 @@ export function AdminRequests() {
     fetchRequests();
   }, []);
 
+  const openChat = (req: any) => {
+    setSelectedRequest(req);
+    setIsChatModalOpen(true);
+  };
+
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this request?")) return;
     
@@ -65,13 +73,18 @@ export function AdminRequests() {
 
   const handleStatusUpdate = async (id: string, newStatus: string) => {
     try {
+      const updateData: any = { status: newStatus };
+      if (newStatus === 'qualified') {
+        updateData.stage = 'qualified';
+      }
+      
       const { error } = await supabase
         .from('requests')
-        .update({ status: newStatus })
+        .update(updateData)
         .eq('id', id);
       
       if (error) throw error;
-      setRequests(requests.map(r => r.id === id ? { ...r, status: newStatus } : r));
+      setRequests(requests.map(r => r.id === id ? { ...r, ...updateData } : r));
     } catch (error) {
       console.error("Error updating status:", error);
     }
@@ -164,12 +177,17 @@ export function AdminRequests() {
                           <p className="text-[10px] text-gray-500 uppercase tracking-widest">{req.company}</p>
                         </div>
                       </TableCell>
-                      <TableCell className="font-mono text-xs text-gold">{req.deal_id}</TableCell>
+                      <TableCell className="font-mono text-xs text-gold">
+                        <a href={`/deal/${req.deal_id}`} target="_blank" className="hover:underline">
+                          {req.deal_id}
+                        </a>
+                      </TableCell>
                       <TableCell>
                         <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
                           req.status === 'pending' ? 'bg-yellow-500/20 text-yellow-500' : 
-                          req.status === 'responded' ? 'bg-green-500/20 text-green-500' :
-                          'bg-blue-500/20 text-blue-500'
+                          req.status === 'qualified' ? 'bg-green-500/20 text-green-500' :
+                          req.status === 'due_diligence' ? 'bg-blue-500/20 text-blue-500' :
+                          'bg-gray-500/20 text-gray-400'
                         }`}>
                           {req.status}
                         </span>
@@ -179,14 +197,23 @@ export function AdminRequests() {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
-                          <Button variant="ghost" size="icon" className="text-gray-400 hover:text-white">
-                            <Eye className="w-4 h-4" />
-                          </Button>
+                          {(req.status === 'qualified' || req.status === 'due_diligence') && (
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="text-gray-400 hover:text-blue-500"
+                              onClick={() => openChat(req)}
+                              title="Open Deal Room"
+                            >
+                              <MessageCircle className="w-4 h-4" />
+                            </Button>
+                          )}
                           <Button 
                             variant="ghost" 
                             size="icon" 
                             className="text-gray-400 hover:text-green-500"
-                            onClick={() => handleStatusUpdate(req.id, 'responded')}
+                            onClick={() => handleStatusUpdate(req.id, 'qualified')}
+                            title="Qualify Request"
                           >
                             <CheckCircle2 className="w-4 h-4" />
                           </Button>
@@ -194,7 +221,8 @@ export function AdminRequests() {
                             variant="ghost" 
                             size="icon" 
                             className="text-gray-400 hover:text-red-400"
-                            onClick={() => handleDelete(req.id)}
+                            onClick={() => handleStatusUpdate(req.id, 'rejected')}
+                            title="Reject Request"
                           >
                             <Trash2 className="w-4 h-4" />
                           </Button>
@@ -208,6 +236,15 @@ export function AdminRequests() {
           </CardContent>
         </Card>
       </div>
+      
+      {selectedRequest && (
+        <DealRoomModal 
+          isOpen={isChatModalOpen}
+          onClose={() => setIsChatModalOpen(false)}
+          deal={{ id: selectedRequest.deal_id, title: "Requested Deal", broker_id: "admin" } as any}
+          userRequest={selectedRequest}
+        />
+      )}
     </AdminLayout>
   );
 }

@@ -9,12 +9,16 @@ import { PageLayout } from "@/src/components/layout/PageLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui/card";
 import { Button } from "@/src/components/ui/button";
 import { motion } from "motion/react";
-import { PurchaseRequestModal, ContactBrokerModal } from "@/src/components/deals/DealModals";
+import { DealStageTracker, DealStage } from "@/src/components/deals/DealStageTracker";
+import { EscrowTracker } from "@/src/components/deals/EscrowTracker";
+import { PurchaseRequestModal, DealRoomModal } from "@/src/components/deals/DealModals";
 
 export function DealManifest() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [dealData, setDealData] = React.useState<Deal | null>(null);
+  const [userRequest, setUserRequest] = React.useState<any>(null);
+  const [userProfile, setUserProfile] = React.useState<any>(null);
   const [loading, setLoading] = React.useState(true);
   const [isPurchaseModalOpen, setIsPurchaseModalOpen] = React.useState(false);
   const [isContactModalOpen, setIsContactModalOpen] = React.useState(false);
@@ -185,6 +189,8 @@ export function DealManifest() {
   React.useEffect(() => {
     const fetchDeal = async () => {
       try {
+        const { data: { user } } = await supabase.auth.getUser();
+
         const { data, error } = await supabase
           .from('deals')
           .select('*')
@@ -193,6 +199,28 @@ export function DealManifest() {
         
         if (error) throw error;
         setDealData(data);
+
+        if (user) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', user.id)
+            .single();
+          setUserProfile(profile);
+
+          const { data: reqData } = await supabase
+             .from('requests')
+             .select('*')
+             .eq('deal_id', id)
+             .contains('metadata', { buyer_id: user.id })
+             .order('created_at', { ascending: false })
+             .limit(1)
+             .maybeSingle();
+
+          if (reqData) {
+            setUserRequest(reqData);
+          }
+        }
       } catch (error) {
         console.error("Error fetching deal:", error);
       } finally {
@@ -202,6 +230,50 @@ export function DealManifest() {
 
     fetchDeal();
   }, [id]);
+
+  const handleInitiateDueDiligence = async () => {
+    if (!userRequest || userRequest.status !== "qualified") return;
+    try {
+      const { error } = await supabase
+        .from('requests')
+        .update({ status: 'due_diligence', stage: 'due_diligence' })
+        .eq('id', userRequest.id);
+      
+      if (error) throw error;
+      
+      setUserRequest((prev: any) => ({ ...prev, status: 'due_diligence', stage: 'due_diligence' }));
+      alert("Due diligence process initiated. Our compliance team will proceed.");
+    } catch (err) {
+      console.error(err);
+      alert("Failed to initiate due diligence.");
+    }
+  };
+
+  const handleOpenDealRoom = () => {
+    setIsContactModalOpen(true);
+    if (userRequest && ["interest", "review", "qualified"].includes(userRequest.stage || "interest")) {
+      handleUpdateStage("negotiation");
+    }
+  };
+
+  const handleUpdateStage = async (newStage: DealStage) => {
+    if (!userRequest) return;
+    try {
+      const { error } = await supabase
+        .from('requests')
+        .update({ stage: newStage })
+        .eq('id', userRequest.id);
+      
+      if (error) throw error;
+      setUserRequest((prev: any) => ({ ...prev, stage: newStage }));
+    } catch (err) {
+      console.error("Failed to update stage:", err);
+      alert("Failed to update deal stage.");
+    }
+  };
+
+  const currentStage = userRequest?.stage || "interest";
+  const isAdmin = userProfile?.role === "admin";
 
   if (loading) {
     return (
@@ -247,6 +319,20 @@ export function DealManifest() {
     }
   };
 
+  const getStageBadgeText = (stage: string) => {
+    switch(stage) {
+      case "interest": return "Expression of Interest";
+      case "review": return "Under Review";
+      case "qualified": return "Prospect Qualified";
+      case "negotiation": return "Negotiation in Progress";
+      case "due_diligence": return "Due Diligence Ongoing";
+      case "terms_agreed": return "Terms Agreed";
+      case "contract_issued": return "Contract Issued";
+      case "closed": return "Deal Closed";
+      default: return "";
+    }
+  };
+
   return (
     <PageLayout 
       title="Deal Manifest" 
@@ -277,6 +363,11 @@ export function DealManifest() {
                     <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border ${getStatusColor(dealData.status)}`}>
                       {dealData.status}
                     </span>
+                    {userRequest && userRequest.stage && (
+                      <span className="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border border-gold/50 bg-gold/10 text-gold shadow-[0_0_10px_rgba(212,175,55,0.2)]">
+                        {getStageBadgeText(userRequest.stage)}
+                      </span>
+                    )}
                     {/* Removed DB source_type check temporarily, would require profile join.
                     {dealData.source_type === 'admin' ? (
                       <span className="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border border-blue-500/50 bg-blue-500/10 text-blue-400 flex items-center gap-1">
@@ -471,6 +562,26 @@ export function DealManifest() {
               </CardContent>
             </Card>
 
+            {/* Escrow Tracker - Appears after Terms Agreed */}
+            {userRequest && ["terms_agreed", "contract_issued", "execution", "closed"].includes(currentStage) && (
+              <EscrowTracker 
+                dealId={dealData.id}
+                buyerId={userRequest.metadata?.buyer_id}
+                isAdmin={isAdmin}
+                onEscrowSecured={() => handleUpdateStage("execution")}
+                onEscrowReleased={() => handleUpdateStage("closed")}
+              />
+            )}
+
+            {/* Stage Tracker - Appears above actions if there is a request */}
+            {userRequest && (
+              <DealStageTracker 
+                currentStage={currentStage} 
+                isAdmin={isAdmin}
+                onUpdateStage={handleUpdateStage}
+              />
+            )}
+
             {/* Action Panel */}
             <Card className="bg-gold border-none overflow-hidden relative lg:sticky lg:top-32 z-10">
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(255,255,255,0.2)_0%,_transparent_70%)]" />
@@ -481,19 +592,45 @@ export function DealManifest() {
                 </div>
                 
                 <div className="space-y-3">
-                  <Button 
-                    className="w-full bg-background text-white hover:bg-background/90 font-bold h-14 text-lg"
-                    onClick={() => setIsPurchaseModalOpen(true)}
-                  >
-                    Request Purchase
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    className="w-full border-background/20 bg-transparent text-background hover:bg-background/10 font-bold h-12"
-                    onClick={() => setIsContactModalOpen(true)}
-                  >
-                    Contact Broker
-                  </Button>
+                  {!userRequest && (
+                    <Button 
+                      className="w-full bg-background text-white hover:bg-background/90 font-bold h-14 text-lg"
+                      onClick={() => setIsPurchaseModalOpen(true)}
+                    >
+                      Express Interest
+                    </Button>
+                  )}
+                  {userRequest?.status === "pending" && (
+                    <Button 
+                      className="w-full bg-background/50 text-background/80 font-bold h-14 text-lg cursor-not-allowed border-none"
+                      disabled
+                    >
+                      Under Review
+                    </Button>
+                  )}
+                  {userRequest?.status === "due_diligence" && (
+                    <div className="w-full min-h-14 py-2 bg-blue-900/20 text-blue-900 font-bold text-center text-lg flex items-center justify-center rounded-md border border-blue-900/30">
+                      Due Diligence in Progress
+                    </div>
+                  )}
+                  {(userRequest?.status === "qualified" || userRequest?.status === "due_diligence") && (
+                    <Button 
+                      variant="outline" 
+                      className="w-full border-background/20 bg-transparent text-background hover:bg-background/10 font-bold h-12"
+                      onClick={handleOpenDealRoom}
+                    >
+                      Open Deal Room
+                    </Button>
+                  )}
+                  {(!userRequest || userRequest.status === "pending" || userRequest.status === "rejected") && (
+                    <Button 
+                      variant="outline" 
+                      className="w-full border-background/10 bg-transparent text-background/50 font-bold h-12 cursor-not-allowed"
+                      disabled
+                    >
+                      Open Deal Room
+                    </Button>
+                  )}
                 </div>
 
                 <div className="pt-6 border-t border-background/10 space-y-4">
@@ -503,13 +640,21 @@ export function DealManifest() {
                   >
                     <Download className="w-4 h-4" /> Download Full Manifest (PDF)
                   </button>
-                  <button className="flex items-center gap-3 text-background/80 hover:text-background transition-colors text-sm font-bold w-full">
+                  <button 
+                    className={`flex items-center gap-3 text-sm font-bold w-full transition-colors ${
+                      userRequest?.status === "qualified" 
+                        ? "text-background/80 hover:text-background cursor-pointer" 
+                        : "text-background/40 cursor-not-allowed"
+                    }`}
+                    onClick={handleInitiateDueDiligence}
+                    disabled={userRequest?.status !== "qualified"}
+                  >
                     <FileSearch className="w-4 h-4" /> Initiate Due Diligence
                   </button>
                 </div>
                 
                 <p className="text-[10px] text-background/60 font-medium text-center italic">
-                  * All requests are subject to final approval by Global Sentinel Group compliance.
+                  * All engagements follow compliance and qualification procedures.
                 </p>
               </CardContent>
             </Card>
@@ -530,13 +675,18 @@ export function DealManifest() {
       {/* Modals */}
       <PurchaseRequestModal 
         isOpen={isPurchaseModalOpen} 
-        onClose={() => setIsPurchaseModalOpen(false)} 
+        onClose={() => {
+          setIsPurchaseModalOpen(false);
+          // Simple optimistic check to refresh request logic if they submitted
+          setUserRequest((prev: any) => prev || { status: 'pending', type: 'EOI' });
+        }} 
         deal={dealData} 
       />
-      <ContactBrokerModal 
+      <DealRoomModal 
         isOpen={isContactModalOpen} 
         onClose={() => setIsContactModalOpen(false)} 
-        deal={dealData} 
+        deal={dealData}
+        userRequest={userRequest}
       />
     </PageLayout>
   );
