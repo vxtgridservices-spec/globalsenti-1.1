@@ -40,35 +40,26 @@ export function BrokerDashboard() {
         const activeDeals = deals.filter(d => d.status === 'Available').length;
         const pendingDeals = deals.filter(d => d.status === 'Under Review').length;
 
-        // Fetch requests for broker's deals
-        // We assume 'requests' has a 'deal_id' and we need to verify which deals belong to the broker
-        const dealIds = deals.map(d => d.id);
-        
-        let totalRequests = 0;
-        if (dealIds.length > 0) {
-          const { count, error: reqError } = await supabase
-            .from('requests')
-            .select('*', { count: 'exact', head: true })
-            .in('deal_id', dealIds);
-          
-          if (!reqError) totalRequests = count || 0;
+        // Fetch requests strictly facilitated by this broker
+        const { count: totalRequests, error: reqError } = await supabase
+          .from('requests')
+          .select('*', { count: 'exact', head: true })
+          .eq('broker_id', user.id);
 
-          // Fetch recent requests
-          const { data: recentReqs } = await supabase
-            .from('requests')
-            .select('*')
-            .in('deal_id', dealIds)
-            .order('created_at', { ascending: false })
-            .limit(5);
-          
-          setRecentRequests(recentReqs || []);
-        }
+        const { data: recentReqs } = await supabase
+          .from('requests')
+          .select('*')
+          .eq('broker_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(5);
+        
+        setRecentRequests(recentReqs || []);
 
         setStats([
-          { title: "Total Deals", value: totalDeals.toString(), change: "+0%", trend: "up", icon: Briefcase, color: "text-blue-400" },
-          { title: "Active Deals", value: activeDeals.toString(), change: "+0%", trend: "up", icon: TrendingUp, color: "text-green-400" },
-          { title: "Pending Deals", value: pendingDeals.toString(), change: "+0%", trend: "down", icon: Clock, color: "text-yellow-400" },
-          { title: "Total Requests", value: totalRequests.toString(), change: "+0%", trend: "up", icon: MessageSquare, color: "text-gold" },
+          { title: "Your Commodities", value: totalDeals.toString(), change: "+0%", trend: "up", icon: Briefcase, color: "text-blue-400" },
+          { title: "Active Listings", value: activeDeals.toString(), change: "+0%", trend: "up", icon: TrendingUp, color: "text-green-400" },
+          { title: "Under Review", value: pendingDeals.toString(), change: "+0%", trend: "down", icon: Clock, color: "text-yellow-400" },
+          { title: "Client Engagements", value: (totalRequests || 0).toString(), change: "+0%", trend: "up", icon: MessageSquare, color: "text-gold" },
         ]);
       } catch (error) {
         console.error("Error fetching broker stats:", error);

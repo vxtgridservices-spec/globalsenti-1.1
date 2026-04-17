@@ -1,8 +1,8 @@
 import * as React from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate, Link, useLocation } from "react-router-dom";
 import { supabase } from "@/src/lib/supabase";
 import { Deal } from "@/src/data/deals";
-import { Loader2, ShieldCheck, Lock, FileText, Download, ArrowLeft, CheckCircle2, Globe, Scale, Truck, BadgeCheck, Briefcase, History, FileSearch } from "lucide-react";
+import { Loader2, ShieldCheck, Lock, FileText, Download, ArrowLeft, CheckCircle2, Globe, Scale, Truck, BadgeCheck, Briefcase, History, FileSearch, Users } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { PageLayout } from "@/src/components/layout/PageLayout";
@@ -11,14 +11,20 @@ import { Button } from "@/src/components/ui/button";
 import { motion } from "motion/react";
 import { DealStageTracker, DealStage } from "@/src/components/deals/DealStageTracker";
 import { EscrowTracker } from "@/src/components/deals/EscrowTracker";
+import { FundingInstructions } from "@/src/components/deals/FundingInstructions";
 import { PurchaseRequestModal, DealRoomModal } from "@/src/components/deals/DealModals";
 
 export function DealManifest() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const queryParams = new URLSearchParams(location.search);
+  const ridOverride = queryParams.get('rid');
+  
   const [dealData, setDealData] = React.useState<Deal | null>(null);
   const [userRequest, setUserRequest] = React.useState<any>(null);
   const [userProfile, setUserProfile] = React.useState<any>(null);
+  const [brokerProfile, setBrokerProfile] = React.useState<any>(null);
   const [loading, setLoading] = React.useState(true);
   const [isPurchaseModalOpen, setIsPurchaseModalOpen] = React.useState(false);
   const [isContactModalOpen, setIsContactModalOpen] = React.useState(false);
@@ -200,6 +206,16 @@ export function DealManifest() {
         if (error) throw error;
         setDealData(data);
 
+        // Fetch Broker Profile
+        if (data.broker_id && data.broker_id !== 'admin' && data.broker_id !== 'admin-system') {
+          const { data: bProfile } = await supabase
+            .from('profiles')
+            .select('full_name, email')
+            .eq('id', data.broker_id)
+            .single();
+          setBrokerProfile(bProfile);
+        }
+
         if (user) {
           const { data: profile } = await supabase
             .from('profiles')
@@ -208,11 +224,20 @@ export function DealManifest() {
             .single();
           setUserProfile(profile);
 
-          const { data: reqData } = await supabase
+          let reqQuery = supabase
              .from('requests')
              .select('*')
-             .eq('deal_id', id)
-             .contains('metadata', { buyer_id: user.id })
+             .eq('deal_id', id);
+          
+          if (ridOverride) {
+            // Admin/Broker override to view specific request
+            reqQuery = reqQuery.eq('id', ridOverride);
+          } else {
+            // Buyer view: fetch their own request
+            reqQuery = reqQuery.contains('metadata', { buyer_id: user.id });
+          }
+
+          const { data: reqData } = await reqQuery
              .order('created_at', { ascending: false })
              .limit(1)
              .maybeSingle();
@@ -368,17 +393,17 @@ export function DealManifest() {
                         {getStageBadgeText(userRequest.stage)}
                       </span>
                     )}
-                    {/* Removed DB source_type check temporarily, would require profile join.
-                    {dealData.source_type === 'admin' ? (
-                      <span className="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border border-blue-500/50 bg-blue-500/10 text-blue-400 flex items-center gap-1">
-                        <BadgeCheck className="w-3 h-3" /> Direct Supply
+                    
+                    {brokerProfile ? (
+                       <span className="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border border-blue-500/30 bg-blue-500/10 text-blue-400 flex items-center gap-1">
+                        <Users className="w-3 h-3" /> Partner: {brokerProfile.full_name || brokerProfile.email.split('@')[0]}
                       </span>
                     ) : (
                       <span className="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border border-gold/30 bg-gold/10 text-gold flex items-center gap-1">
-                        <Briefcase className="w-3 h-3" /> Broker Facilitated
+                        <ShieldCheck className="w-3 h-3 text-gold" /> GSG Principal
                       </span>
                     )}
-                    */}
+
                     <span className="text-gray-500 text-[10px] font-mono tracking-[0.2em] uppercase">REF: {dealData.id}</span>
                   </div>
                   <h1 className="text-4xl md:text-5xl font-serif text-white leading-tight">{dealData.title}</h1>
@@ -562,6 +587,17 @@ export function DealManifest() {
               </CardContent>
             </Card>
 
+            {/* Funding Instructions - Appears after Due Diligence */}
+            {userRequest && ["due_diligence", "terms_agreed", "contract_issued", "execution", "closed"].includes(currentStage) && (
+              <FundingInstructions
+                requestId={userRequest.id}
+                paymentMethod={userRequest.metadata?.payment_method || "Wire Transfer"}
+                isAdmin={isAdmin}
+                buyerId={userRequest.metadata?.buyer_id}
+                stage={currentStage}
+              />
+            )}
+
             {/* Escrow Tracker - Appears after Terms Agreed */}
             {userRequest && ["terms_agreed", "contract_issued", "execution", "closed"].includes(currentStage) && (
               <EscrowTracker 
@@ -609,11 +645,11 @@ export function DealManifest() {
                     </Button>
                   )}
                   {userRequest?.status === "due_diligence" && (
-                    <div className="w-full min-h-14 py-2 bg-blue-900/20 text-blue-900 font-bold text-center text-lg flex items-center justify-center rounded-md border border-blue-900/30">
+                    <div className="w-full min-h-14 py-2 bg-blue-900/20 text-blue-900 font-bold text-center text-lg flex items-center justify-center rounded-md border border-blue-900/30 mb-2">
                       Due Diligence in Progress
                     </div>
                   )}
-                  {(userRequest?.status === "qualified" || userRequest?.status === "due_diligence") && (
+                  {userRequest && userRequest.status !== "pending" && userRequest.status !== "rejected" && (
                     <Button 
                       variant="outline" 
                       className="w-full border-background/20 bg-transparent text-background hover:bg-background/10 font-bold h-12"
@@ -622,13 +658,13 @@ export function DealManifest() {
                       Open Deal Room
                     </Button>
                   )}
-                  {(!userRequest || userRequest.status === "pending" || userRequest.status === "rejected") && (
+                  {userRequest?.status === "rejected" && (
                     <Button 
                       variant="outline" 
-                      className="w-full border-background/10 bg-transparent text-background/50 font-bold h-12 cursor-not-allowed"
+                      className="w-full border-red-500/10 bg-transparent text-red-500/50 font-bold h-12 cursor-not-allowed"
                       disabled
                     >
-                      Open Deal Room
+                      Request Rejected
                     </Button>
                   )}
                 </div>
@@ -642,12 +678,12 @@ export function DealManifest() {
                   </button>
                   <button 
                     className={`flex items-center gap-3 text-sm font-bold w-full transition-colors ${
-                      userRequest?.status === "qualified" 
+                      userRequest && userRequest.status !== "pending" && userRequest.status !== "rejected"
                         ? "text-background/80 hover:text-background cursor-pointer" 
                         : "text-background/40 cursor-not-allowed"
                     }`}
                     onClick={handleInitiateDueDiligence}
-                    disabled={userRequest?.status !== "qualified"}
+                    disabled={!userRequest || userRequest.status === "pending" || userRequest.status === "rejected"}
                   >
                     <FileSearch className="w-4 h-4" /> Initiate Due Diligence
                   </button>

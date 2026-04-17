@@ -26,9 +26,13 @@ import {
   FileUp,
   CheckCircle2,
   Loader2,
+  Settings2,
+  Activity,
+  UserCheck
 } from "lucide-react";
 import { Deal } from "@/src/data/deals";
 import { supabase } from "@/src/lib/supabase";
+import { DEAL_STAGES, STAGE_LABELS, ALLOWED_TRANSITIONS, ROLE_PERMISSIONS, DealStage } from "./DealStageTracker";
 
 interface ModalProps {
   isOpen: boolean;
@@ -59,6 +63,7 @@ export function PurchaseRequestModal({ isOpen, onClose, deal }: ModalProps) {
           name: formData.name,
           company: formData.company,
           deal_id: deal.id,
+          broker_id: deal.broker_id || "admin",
           quantity: formData.quantity,
           payment_method: formData.paymentMethod,
           type: "EOI",
@@ -68,6 +73,7 @@ export function PurchaseRequestModal({ isOpen, onClose, deal }: ModalProps) {
             commodity: deal.commodityType,
             title: deal.title,
             buyer_id: user?.id,
+            broker_id: deal.broker_id,
           },
         },
       ]);
@@ -267,7 +273,92 @@ export function DealRoomModal({
   const [loading, setLoading] = React.useState(true);
   const [sending, setSending] = React.useState(false);
   const [currentUser, setCurrentUser] = React.useState<any>(null);
+  const [participantRoles, setParticipantRoles] = React.useState<Record<string, string>>({});
+
+  React.useEffect(() => {
+    const fetchParticipantRoles = async () => {
+       const buyerId = userRequest?.metadata?.buyer_id || userRequest?.buyer_id;
+       const participantIds = [deal.broker_id, currentUser?.id, buyerId].filter(d => d && d !== 'unassigned');
+       
+       if(participantIds.length === 0) return;
+
+       const { data: profiles } = await supabase
+         .from('profiles')
+         .select('id, role')
+         .in('id', [...new Set(participantIds)]);
+         
+       if (profiles) {
+         setParticipantRoles(profiles.reduce((acc, p) => ({ ...acc, [p.id]: p.role }), {}));
+       }
+    };
+    
+    if (deal && userRequest && currentUser) fetchParticipantRoles();
+  }, [deal, userRequest, currentUser]);
+  const [userRole, setUserRole] = React.useState<string | null>(null);
+  const [currentStage, setCurrentStage] = React.useState<string>(userRequest?.stage || "interest");
   const scrollRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    if (userRequest?.stage) {
+      setCurrentStage(userRequest.stage);
+    }
+  }, [userRequest]);
+
+  React.useEffect(() => {
+    const fetchUserAndRole = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setCurrentUser(user);
+      if (user) {
+        const { data } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single();
+        if (data) setUserRole(data.role);
+      }
+    };
+    fetchUserAndRole();
+  }, []);
+
+  const handleUpdateStatus = async (newStage: string) => {
+    if (!userRequest?.id) return;
+    
+    // Validate transition
+    const validTransitions = ALLOWED_TRANSITIONS[currentStage as DealStage] || [];
+    if (!validTransitions.includes(newStage as DealStage)) {
+      console.warn("Invalid transition attempted");
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('requests')
+        .update({ stage: newStage })
+        .eq('id', userRequest.id);
+      
+      if (error) throw error;
+      
+      setCurrentStage(newStage);
+
+      // Audit Log
+      const oldLabel = STAGE_LABELS[currentStage as DealStage];
+      const newLabel = STAGE_LABELS[newStage as DealStage];
+
+      // Send system message
+      const conversationBuyerId = userRequest?.metadata?.buyer_id || userRequest?.buyer_id;
+      
+      await supabase.from("messages").insert([{
+        deal_id: deal.id,
+        buyer_id: conversationBuyerId,
+        broker_id: deal.broker_id || "admin",
+        sender_id: currentUser.id,
+        message: `[PROTOCOL UPDATE] Stage updated: ${oldLabel} → ${newLabel}`,
+        is_read: false,
+      }]);
+    } catch (err) {
+      console.error("Failed to update status", err);
+    }
+  };
 
   React.useEffect(() => {
     let channel: any;
@@ -310,9 +401,7 @@ export function DealRoomModal({
             }
           }
         )
-        .subscribe((status) => {
-          console.log("Realtime Subscription Status:", status);
-        });
+        .subscribe();
     }
 
     return () => {
@@ -321,14 +410,6 @@ export function DealRoomModal({
       }
     };
   }, [isOpen, deal.id, currentUser, userRequest]);
-
-  React.useEffect(() => {
-    const getUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      setCurrentUser(user);
-    };
-    getUser();
-  }, []);
 
   React.useEffect(() => {
     if (scrollRef.current) {
@@ -429,22 +510,52 @@ export function DealRoomModal({
               <DialogTitle className="text-2xl font-serif tracking-tight text-white">
                 {deal.title}
               </DialogTitle>
-              <div className="flex items-center gap-2 mt-1">
-                <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                <span className="text-[10px] text-gray-400 font-mono uppercase tracking-[0.2em]">
-                  Encrypted Channel • REF-{deal.id.slice(0, 8)}
-                </span>
+              <div className="flex items-center gap-4 mt-1">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                  <span className="text-[10px] text-gray-400 font-mono uppercase tracking-[0.2em]">
+                    Encrypted Channel • REF-{deal.id.slice(0, 8)}
+                  </span>
+                </div>
+                <div className="h-4 w-px bg-white/10" />
+                <div className="flex items-center gap-2">
+                  <Activity className="w-3 h-3 text-gold" />
+                  <span className="text-[10px] text-gold font-bold uppercase tracking-widest">
+                    {STAGE_LABELS[currentStage as keyof typeof STAGE_LABELS] || "Live Session"}
+                  </span>
+                </div>
               </div>
             </div>
           </div>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={onClose}
-            className="border-white/10 text-gray-400 hover:text-white hover:bg-white/5 font-bold uppercase tracking-widest text-[10px] h-10 px-4 rounded-xl"
-          >
-            Terminal Exit
-          </Button>
+          <div className="flex items-center gap-3">
+            {userRequest && (
+              <Select onValueChange={handleUpdateStatus} value={currentStage}>
+                <SelectTrigger className="w-[200px] h-10 bg-white/5 border-white/10 text-white rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-white/10 transition-colors">
+                  <div className="flex items-center gap-2">
+                    <Settings2 className="w-3 h-3" />
+                    <SelectValue placeholder="Update Status" />
+                  </div>
+                </SelectTrigger>
+                <SelectContent className="bg-secondary border-white/10 text-white">
+                  {(ALLOWED_TRANSITIONS[currentStage as DealStage] || [])
+                    .filter(s => (ROLE_PERMISSIONS[userRole] || []).includes(s) || userRole === 'admin')
+                    .map((s) => (
+                    <SelectItem key={s} value={s} className={`text-[10px] font-bold uppercase tracking-widest ${s === 'reject_transaction' ? 'text-red-500' : ''}`}>
+                      {STAGE_LABELS[s]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={onClose}
+              className="border-white/10 text-gray-400 hover:text-white hover:bg-white/5 font-bold uppercase tracking-widest text-[10px] h-10 px-4 rounded-xl"
+            >
+              Terminal Exit
+            </Button>
+          </div>
         </DialogHeader>
 
         <div
@@ -465,18 +576,9 @@ export function DealRoomModal({
               const isMine = msg.sender_id === currentUser?.id;
 
               // Determine sender label
-              let senderLabel = isMine
-                ? "You"
-                : msg.sender_id === deal.broker_id
-                  ? "Broker"
-                  : "Counterparty";
-              if (
-                !isMine &&
-                msg.sender_id !== deal.broker_id &&
-                msg.sender_id !== msg.buyer_id
-              ) {
-                senderLabel = "Compliance / Admin";
-              }
+              const role = participantRoles[msg.sender_id] || 'User';
+              const formattedRole = role.charAt(0).toUpperCase() + role.slice(1);
+              const senderLabel = isMine ? `You (${formattedRole})` : formattedRole;
 
               return (
                 <div

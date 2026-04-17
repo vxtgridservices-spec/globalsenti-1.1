@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/src/lib/supabase";
 import { DealRoomModal } from "@/src/components/deals/DealModals";
+import { ALLOWED_TRANSITIONS, DealStage, STAGE_LABELS } from "@/src/components/deals/DealStageTracker";
 
 export function BrokerRequests() {
   const [requests, setRequests] = React.useState<any[]>([]);
@@ -40,29 +41,29 @@ export function BrokerRequests() {
         if (!user) return;
         setUser(user);
 
-        // 1. Get broker's deals first to find associated requests
-        const { data: deals } = await supabase
-          .from('deals')
-          .select('id, title')
-          .eq('broker_id', user.id);
-
-        if (!deals || deals.length === 0) {
-          setRequests([]);
-          setLoading(false);
-          return;
-        }
-
-        const dealIds = deals.map(d => d.id);
-        const dealMap = deals.reduce((acc, d) => ({ ...acc, [d.id]: d.title }), {});
-
-        // 2. Fetch requests for these deal IDs
+        // 1. Fetch requests strictly assigned to this broker
         const { data, error } = await supabase
           .from('requests')
           .select('*')
-          .in('deal_id', dealIds)
+          .eq('broker_id', user.id)
           .order('created_at', { ascending: false });
         
         if (error) throw error;
+
+        // 2. Fetch deal titles for these requests to build the map
+        const dealIds = [...new Set((data || []).map(r => r.deal_id))];
+        const dealMap: Record<string, string> = {};
+        
+        if (dealIds.length > 0) {
+          const { data: deals } = await supabase
+            .from('deals')
+            .select('id, title')
+            .in('id', dealIds);
+          
+          (deals || []).forEach(d => {
+            dealMap[d.id] = d.title;
+          });
+        }
         
         // Enhance requests with deal title
         const enhancedRequests = (data || []).map(req => ({
@@ -81,17 +82,24 @@ export function BrokerRequests() {
     fetchRequests();
   }, []);
 
-  const handleStatusUpdate = async (id: string, newStatus: string) => {
+  const handleStatusUpdate = async (req: any, newStage: string) => {
+    // Validate transition
+    const validTransitions = ALLOWED_TRANSITIONS[req.stage as DealStage] || [];
+    if (!validTransitions.includes(newStage as DealStage)) {
+      console.warn("Invalid transition attempted");
+      return;
+    }
+
     try {
       const { error } = await supabase
         .from('requests')
-        .update({ status: newStatus })
-        .eq('id', id);
+        .update({ stage: newStage })
+        .eq('id', req.id);
       
       if (error) throw error;
-      setRequests(requests.map(r => r.id === id ? { ...r, status: newStatus } : r));
+      setRequests(requests.map(r => r.id === req.id ? { ...r, stage: newStage } : r));
     } catch (error) {
-      console.error("Error updating request status:", error);
+      console.error("Error updating request stage:", error);
     }
   };
 
@@ -185,7 +193,7 @@ export function BrokerRequests() {
                       </TableCell>
                        <TableCell className="text-right">
                         <div className="flex justify-end gap-1">
-                           {(req.status === 'qualified' || req.status === 'due_diligence') && (
+                           {req.status !== 'pending' && req.status !== 'rejected' && (
                              <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-blue-500" title="Open Deal Room" onClick={() => openChat(req)}>
                                 <MessageCircle className="w-4 h-4" />
                              </Button>

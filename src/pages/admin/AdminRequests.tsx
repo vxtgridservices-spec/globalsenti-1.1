@@ -17,7 +17,9 @@ import {
   Trash2, 
   Eye,
   Clock,
-  ShieldCheck
+  ShieldCheck,
+  Users,
+  Search
 } from "lucide-react";
 
 import { supabase } from "@/src/lib/supabase";
@@ -27,18 +29,51 @@ import { DealRoomModal } from "@/src/components/deals/DealModals";
 export function AdminRequests() {
   const [requests, setRequests] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const [userProfile, setUserProfile] = React.useState<any>(null);
+  const [profiles, setProfiles] = React.useState<Record<string, any>>({});
   const [selectedRequest, setSelectedRequest] = React.useState<any>(null);
   const [isChatModalOpen, setIsChatModalOpen] = React.useState(false);
+  const [viewTab, setViewTab] = React.useState<'all' | 'admin' | 'broker'>('all');
 
   const fetchRequests = async () => {
     try {
-      const { data, error } = await supabase
-        .from('requests')
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: profile } = await supabase
+        .from('profiles')
         .select('*')
-        .order('created_at', { ascending: false });
+        .eq('id', user.id)
+        .single();
+      
+      setUserProfile(profile);
+
+      let query = supabase.from('requests').select('*');
+
+      // If user is a broker, only show their deals
+      if (profile?.role === 'broker') {
+        query = query.eq('broker_id', user.id);
+      }
+
+      const { data, error } = await query.order('created_at', { ascending: false });
       
       if (error) throw error;
       setRequests(data || []);
+
+      // Fetch unique broker profiles to display names
+      const brokerIds = Array.from(new Set((data || []).map(r => r.broker_id).filter(Boolean)));
+      if (brokerIds.length > 0) {
+        const { data: pData } = await supabase
+          .from('profiles')
+          .select('id, full_name, email')
+          .in('id', brokerIds);
+        
+        if (pData) {
+          const pMap = pData.reduce((acc, p) => ({ ...acc, [p.id]: p }), {});
+          setProfiles(pMap);
+        }
+      }
+
     } catch (error) {
       console.error("Error fetching requests:", error);
     } finally {
@@ -105,9 +140,9 @@ export function AdminRequests() {
                 <ShoppingBag className="w-6 h-6 text-gold" />
               </div>
               <div>
-                <p className="text-xs text-gray-500 uppercase tracking-widest">Purchase Requests</p>
+                <p className="text-xs text-gray-500 uppercase tracking-widest">Global Requests</p>
                 <p className="text-2xl font-serif text-white">
-                  {requests.filter(r => r.type === 'purchase').length}
+                  {requests.length}
                 </p>
               </div>
             </CardContent>
@@ -118,9 +153,9 @@ export function AdminRequests() {
                 <MessageSquare className="w-6 h-6 text-blue-500" />
               </div>
               <div>
-                <p className="text-xs text-gray-500 uppercase tracking-widest">Broker Inquiries</p>
+                <p className="text-xs text-gray-500 uppercase tracking-widest">Internal (HQ)</p>
                 <p className="text-2xl font-serif text-white">
-                  {requests.filter(r => r.type === 'broker').length}
+                  {requests.filter(r => r.broker_id === 'admin' || !r.broker_id).length}
                 </p>
               </div>
             </CardContent>
@@ -131,14 +166,43 @@ export function AdminRequests() {
                 <ShieldCheck className="w-6 h-6 text-red-500" />
               </div>
               <div>
-                <p className="text-xs text-gray-500 uppercase tracking-widest">Pending</p>
+                <p className="text-xs text-gray-500 uppercase tracking-widest">Broker Network</p>
                 <p className="text-2xl font-serif text-white">
-                  {requests.filter(r => r.status === 'pending').length}
+                  {requests.filter(r => r.broker_id && r.broker_id !== 'admin').length}
                 </p>
               </div>
             </CardContent>
           </Card>
         </div>
+
+        {userProfile?.role === 'admin' && (
+          <div className="flex gap-4 p-1 bg-black/40 border border-white/5 rounded-2xl w-fit">
+            <Button 
+              variant={viewTab === 'all' ? 'secondary' : 'ghost'} 
+              size="sm"
+              onClick={() => setViewTab('all')}
+              className="rounded-xl h-10 px-6 font-bold uppercase tracking-widest text-[10px]"
+            >
+              All Activity
+            </Button>
+            <Button 
+              variant={viewTab === 'admin' ? 'secondary' : 'ghost'} 
+              size="sm"
+              onClick={() => setViewTab('admin')}
+              className="rounded-xl h-10 px-6 font-bold uppercase tracking-widest text-[10px]"
+            >
+              Direct GSG
+            </Button>
+            <Button 
+              variant={viewTab === 'broker' ? 'secondary' : 'ghost'} 
+              size="sm"
+              onClick={() => setViewTab('broker')}
+              className="rounded-xl h-10 px-6 font-bold uppercase tracking-widest text-[10px]"
+            >
+              Partner Network
+            </Button>
+          </div>
+        )}
 
         <Card className="bg-secondary/20 border-white/5">
           <CardContent className="p-0">
@@ -152,14 +216,23 @@ export function AdminRequests() {
                   <TableRow className="border-white/5 hover:bg-transparent">
                     <TableHead className="text-gray-400 font-bold uppercase tracking-widest text-[10px]">Type</TableHead>
                     <TableHead className="text-gray-400 font-bold uppercase tracking-widest text-[10px]">Requester</TableHead>
-                    <TableHead className="text-gray-400 font-bold uppercase tracking-widest text-[10px]">Deal ID</TableHead>
+                    {userProfile?.role === 'admin' && (
+                      <TableHead className="text-gray-400 font-bold uppercase tracking-widest text-[10px]">Facilitator</TableHead>
+                    )}
+                    <TableHead className="text-gray-400 font-bold uppercase tracking-widest text-[10px]">Deal Reference</TableHead>
                     <TableHead className="text-gray-400 font-bold uppercase tracking-widest text-[10px]">Status</TableHead>
                     <TableHead className="text-gray-400 font-bold uppercase tracking-widest text-[10px]">Submitted</TableHead>
                     <TableHead className="text-right text-gray-400 font-bold uppercase tracking-widest text-[10px]">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {requests.map((req) => (
+                  {requests
+                    .filter(r => {
+                      if (viewTab === 'admin') return r.broker_id === 'admin' || !r.broker_id;
+                      if (viewTab === 'broker') return r.broker_id && r.broker_id !== 'admin';
+                      return true;
+                    })
+                    .map((req) => (
                     <TableRow key={req.id} className="border-white/5 hover:bg-white/5 transition-colors">
                       <TableCell>
                         <div className="flex items-center gap-2">
@@ -177,8 +250,29 @@ export function AdminRequests() {
                           <p className="text-[10px] text-gray-500 uppercase tracking-widest">{req.company}</p>
                         </div>
                       </TableCell>
+                      {userProfile?.role === 'admin' && (
+                        <TableCell>
+                          {req.broker_id && req.broker_id !== 'admin' ? (
+                            <div className="flex items-center gap-2">
+                              <div className="w-6 h-6 bg-blue-500/10 rounded-full flex items-center justify-center border border-blue-500/20">
+                                <Users className="w-3 h-3 text-blue-400" />
+                              </div>
+                              <span className="text-xs text-blue-400 truncate max-w-[120px]">
+                                {profiles[req.broker_id]?.full_name || profiles[req.broker_id]?.email || "Partner Broker"}
+                              </span>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-2">
+                              <div className="w-6 h-6 bg-gold/10 rounded-full flex items-center justify-center border border-gold/20">
+                                <ShieldCheck className="w-3 h-3 text-gold" />
+                              </div>
+                              <span className="text-xs text-gold">GSG Principal</span>
+                            </div>
+                          )}
+                        </TableCell>
+                      )}
                       <TableCell className="font-mono text-xs text-gold">
-                        <a href={`/deal/${req.deal_id}`} target="_blank" className="hover:underline">
+                        <a href={`/deal/${req.deal_id}?rid=${req.id}`} target="_blank" className="hover:underline">
                           {req.deal_id}
                         </a>
                       </TableCell>
@@ -197,7 +291,7 @@ export function AdminRequests() {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
-                          {(req.status === 'qualified' || req.status === 'due_diligence') && (
+                          {req.status !== 'pending' && req.status !== 'rejected' && (
                             <Button 
                               variant="ghost" 
                               size="icon" 
@@ -241,7 +335,11 @@ export function AdminRequests() {
         <DealRoomModal 
           isOpen={isChatModalOpen}
           onClose={() => setIsChatModalOpen(false)}
-          deal={{ id: selectedRequest.deal_id, title: "Requested Deal", broker_id: "admin" } as any}
+          deal={{ 
+            id: selectedRequest.deal_id, 
+            title: "Requested Deal", 
+            broker_id: selectedRequest.broker_id || "admin" 
+          } as any}
           userRequest={selectedRequest}
         />
       )}

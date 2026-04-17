@@ -53,6 +53,20 @@ export function DealRoom() {
         
         let processedDeals = dealsData || [];
 
+        // If user is a broker, only show deals they are facilitating
+        if (profile?.role === 'broker' && currentUser) {
+          const { data: facilitatedReqs } = await supabase
+            .from('requests')
+            .select('deal_id')
+            .eq('broker_id', currentUser.id);
+          
+          const facilitatedDealIds = new Set((facilitatedReqs || []).map(r => r.deal_id));
+          
+          processedDeals = processedDeals.filter(d => 
+            d.broker_id === currentUser.id || facilitatedDealIds.has(d.id)
+          );
+        }
+
         // If we need broker tiers, we could fetch them here. For now, assume basic or fetch manually
         const brokerIds = [...new Set(processedDeals.map(d => d.broker_id).filter(Boolean))];
         let profilesMap: Record<string, any> = {};
