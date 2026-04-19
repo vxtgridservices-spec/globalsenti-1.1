@@ -24,7 +24,7 @@ import {
 
 import { supabase } from "@/src/lib/supabase";
 import { Loader2, MessageCircle } from "lucide-react";
-import { DealRoomModal } from "@/src/components/deals/DealModals";
+import { DealStageModal } from "@/src/components/deals/DealModals";
 
 export function AdminRequests() {
   const [requests, setRequests] = React.useState<any[]>([]);
@@ -83,6 +83,21 @@ export function AdminRequests() {
 
   React.useEffect(() => {
     fetchRequests();
+
+    const channel = supabase
+      .channel('admin-requests-sync')
+      .on('postgres_changes', {
+        event: '*', // Listen to inserts, updates, deletes
+        schema: 'public',
+        table: 'requests'
+      }, () => {
+        fetchRequests(); // Refresh list on any change
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const openChat = (req: any) => {
@@ -108,6 +123,9 @@ export function AdminRequests() {
 
   const handleStatusUpdate = async (id: string, newStatus: string) => {
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
       const updateData: any = { status: newStatus };
       if (newStatus === 'qualified') {
         updateData.stage = 'qualified';
@@ -119,6 +137,21 @@ export function AdminRequests() {
         .eq('id', id);
       
       if (error) throw error;
+
+      // Log system message
+      const targetReq = requests.find(r => r.id === id);
+      if (targetReq) {
+        await supabase.from('messages').insert([{
+          request_id: targetReq.id,
+          deal_id: targetReq.deal_id,
+          buyer_id: targetReq.metadata?.buyer_id || null,
+          sender_id: user.id,
+          sender_role: userProfile?.role || 'admin',
+          body: `[PROTOCOL UPDATE] Administration updated status to: ${newStatus.toUpperCase()}`,
+          message: `[PROTOCOL UPDATE] Administration updated status to: ${newStatus.toUpperCase()}`
+        }]);
+      }
+
       setRequests(requests.map(r => r.id === id ? { ...r, ...updateData } : r));
     } catch (error) {
       console.error("Error updating status:", error);
@@ -332,7 +365,7 @@ export function AdminRequests() {
       </div>
       
       {selectedRequest && (
-        <DealRoomModal 
+        <DealStageModal 
           isOpen={isChatModalOpen}
           onClose={() => setIsChatModalOpen(false)}
           deal={{ 

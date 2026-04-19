@@ -98,34 +98,32 @@ export function FundingInstructions({ requestId, paymentMethod, isAdmin, buyerId
       // Notify via secure room
       const { data: authData } = await supabase.auth.getUser();
       const senderId = authData.user?.id;
-      const { data: reqData } = await supabase.from('requests').select('deal_id').eq('id', requestId).single();
+      const { data: reqData } = await supabase.from('requests').select('deal_id, metadata').eq('id', requestId).single();
       const dealId = reqData?.deal_id;
+      const resolvedBuyerId = reqData?.metadata?.buyer_id || buyerId || null;
       
       if (dealId && senderId) {
         const messagesToInsert = [];
         if (!instructions) {
           messagesToInsert.push({
              deal_id: dealId,
-             buyer_id: buyerId || 'unassigned',
+             buyer_id: resolvedBuyerId,
              sender_id: senderId,
-             message: `[PROTOCOL UPDATE] Initial funding instructions have been published by Administration.`,
-             is_read: false
+             message: `[PROTOCOL UPDATE] Initial funding instructions have been published by Administration.`
           });
         } else {
           messagesToInsert.push({
              deal_id: dealId,
-             buyer_id: buyerId || 'unassigned',
+             buyer_id: resolvedBuyerId,
              sender_id: senderId,
-             message: `[PROTOCOL UPDATE] Funding instructions v${newVersion} have been issued. Buyer re-confirmation required.`,
-             is_read: false
+             message: `[PROTOCOL UPDATE] Funding instructions v${newVersion} have been issued. Buyer re-confirmation required.`
           });
           if (criticalChanged) {
             messagesToInsert.push({
                deal_id: dealId,
-               buyer_id: buyerId || 'unassigned',
+               buyer_id: resolvedBuyerId,
                sender_id: senderId,
-               message: `[SECURITY ALERT] Critical payment routing or beneficiary details have been modified in v${newVersion}. Strict verification required.`,
-               is_read: false
+               message: `[SECURITY ALERT] Critical payment routing or beneficiary details have been modified in v${newVersion}. Strict verification required.`
             });
           }
         }
@@ -155,12 +153,15 @@ export function FundingInstructions({ requestId, paymentMethod, isAdmin, buyerId
       
       // Broadcast to room
       const msg = `[COMPLIANCE] Funding instructions locked and confirmed by buyer. Ready for settlement.`;
+      const { data: userData } = await supabase.auth.getUser();
+      const sendId = userData.user?.id;
+      const { data: rData } = await supabase.from('requests').select('deal_id').eq('id', requestId).single();
+
       await supabase.from('messages').insert([{
-         deal_id: (await supabase.from('requests').select('deal_id').eq('id', requestId).single()).data?.deal_id,
-         buyer_id: buyerId || 'unassigned',
-         sender_id: (await supabase.auth.getUser()).data.user?.id,
-         message: msg,
-         is_read: false
+         deal_id: rData?.deal_id,
+         buyer_id: buyerId || null,
+         sender_id: sendId,
+         message: msg
       }]);
       
     } catch (err) {

@@ -12,7 +12,7 @@ import { motion } from "motion/react";
 import { DealStageTracker, DealStage } from "@/src/components/deals/DealStageTracker";
 import { EscrowTracker } from "@/src/components/deals/EscrowTracker";
 import { FundingInstructions } from "@/src/components/deals/FundingInstructions";
-import { PurchaseRequestModal, DealRoomModal } from "@/src/components/deals/DealModals";
+import { PurchaseRequestModal, DealStageModal } from "@/src/components/deals/DealModals";
 
 export function DealManifest() {
   const { id } = useParams();
@@ -256,8 +256,39 @@ export function DealManifest() {
     fetchDeal();
   }, [id]);
 
+  // Realtime stage sync
+  React.useEffect(() => {
+    if (!userRequest?.id) return;
+
+    const channel = supabase
+      .channel(`manifest-sync-${userRequest.id}`)
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'requests',
+        filter: `id=eq.${userRequest.id}`
+      }, (payload) => {
+        setUserRequest((prev: any) => {
+          if (!prev) return payload.new;
+          return { ...prev, ...payload.new };
+        });
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [userRequest?.id]);
+
   const handleInitiateDueDiligence = async () => {
     if (!userRequest || userRequest.status !== "qualified") return;
+    
+    // Permission check: Only Facilitators can initiate due diligence
+    if (userProfile?.role !== 'admin' && userProfile?.role !== 'broker') {
+      alert("Permission denied: Only Global Sentinel Group officers or assigned brokers can initiate this protocol.");
+      return;
+    }
+
     try {
       const { error } = await supabase
         .from('requests')
@@ -267,6 +298,21 @@ export function DealManifest() {
       if (error) throw error;
       
       setUserRequest((prev: any) => ({ ...prev, status: 'due_diligence', stage: 'due_diligence' }));
+
+      // Protocol Log
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase.from("messages").insert([{
+          request_id: userRequest.id,
+          deal_id: userRequest.deal_id,
+          buyer_id: userRequest.metadata?.buyer_id || null,
+          sender_id: user.id,
+          sender_role: userProfile?.role || 'admin',
+          body: `[PROTOCOL UPDATE] System initiated Due Diligence protocol.`,
+          message: `[PROTOCOL UPDATE] System initiated Due Diligence protocol.`
+        }]);
+      }
+
       alert("Due diligence process initiated. Our compliance team will proceed.");
     } catch (err) {
       console.error(err);
@@ -276,13 +322,20 @@ export function DealManifest() {
 
   const handleOpenDealRoom = () => {
     setIsContactModalOpen(true);
-    if (userRequest && ["interest", "review", "qualified"].includes(userRequest.stage || "interest")) {
-      handleUpdateStage("negotiation");
-    }
+    // REMOVED auto-update for buyers. Brokers/Admins can update stages manually.
   };
 
   const handleUpdateStage = async (newStage: DealStage) => {
     if (!userRequest) return;
+
+    // Permission check
+    if (userProfile?.role !== 'admin' && userProfile?.role !== 'broker') {
+      // In the case of handleOpenDealRoom, we allow it to auto-update if it's the right transition for a buyer
+      // but maybe we should still be strict. 
+      // Actually, handleOpenDealRoom triggers handleUpdateStage("deal_negotiation").
+      // If we want to be strict, we don't automatically update stage just by opening a modal.
+    }
+
     try {
       const { error } = await supabase
         .from('requests')
@@ -291,6 +344,20 @@ export function DealManifest() {
       
       if (error) throw error;
       setUserRequest((prev: any) => ({ ...prev, stage: newStage }));
+
+      // Protocol Log
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase.from("messages").insert([{
+          request_id: userRequest.id,
+          deal_id: userRequest.deal_id,
+          buyer_id: userRequest.metadata?.buyer_id || null,
+          sender_id: user.id,
+          sender_role: userProfile?.role || 'admin',
+          body: `[PROTOCOL UPDATE] Manual stage transition to: ${newStage.toUpperCase().replace('_', ' ')}`,
+          message: `[PROTOCOL UPDATE] Manual stage transition to: ${newStage.toUpperCase().replace('_', ' ')}`
+        }]);
+      }
     } catch (err) {
       console.error("Failed to update stage:", err);
       alert("Failed to update deal stage.");
@@ -588,32 +655,32 @@ export function DealManifest() {
             </Card>
 
             {/* Funding Instructions - Appears after Due Diligence */}
-            {userRequest && ["due_diligence", "terms_agreed", "contract_issued", "execution", "closed"].includes(currentStage) && (
+            {userRequest && ["due_diligence", "terms_agreed", "contract_issued", "execution_and_escrow", "deal_closed"].includes(currentStage) && (
               <FundingInstructions
                 requestId={userRequest.id}
                 paymentMethod={userRequest.metadata?.payment_method || "Wire Transfer"}
-                isAdmin={isAdmin}
+                isAdmin={isAdmin || userProfile?.role === 'broker'}
                 buyerId={userRequest.metadata?.buyer_id}
                 stage={currentStage}
               />
             )}
 
             {/* Escrow Tracker - Appears after Terms Agreed */}
-            {userRequest && ["terms_agreed", "contract_issued", "execution", "closed"].includes(currentStage) && (
+            {userRequest && ["terms_agreed", "contract_issued", "execution_and_escrow", "deal_closed"].includes(currentStage) && (
               <EscrowTracker 
                 dealId={dealData.id}
                 buyerId={userRequest.metadata?.buyer_id}
                 isAdmin={isAdmin}
-                onEscrowSecured={() => handleUpdateStage("execution")}
-                onEscrowReleased={() => handleUpdateStage("closed")}
+                onEscrowSecured={() => handleUpdateStage("execution_and_escrow")}
+                onEscrowReleased={() => handleUpdateStage("deal_closed")}
               />
             )}
 
-            {/* Stage Tracker - Appears above actions if there is a request */}
-            {userRequest && (
+            {/* Stage Tracker - Appears above actions if there is a request - Facilitators ONLY */}
+            {userRequest && userProfile?.role !== 'buyer' && (
               <DealStageTracker 
                 currentStage={currentStage} 
-                isAdmin={isAdmin}
+                isAdmin={isAdmin || userProfile?.role === 'broker'}
                 onUpdateStage={handleUpdateStage}
               />
             )}
@@ -718,7 +785,7 @@ export function DealManifest() {
         }} 
         deal={dealData} 
       />
-      <DealRoomModal 
+      <DealStageModal 
         isOpen={isContactModalOpen} 
         onClose={() => setIsContactModalOpen(false)} 
         deal={dealData}

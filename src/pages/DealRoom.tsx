@@ -33,6 +33,7 @@ export function DealRoom() {
       try {
         let currentUserProfile = null;
         const { data: { user } } = await supabase.auth.getUser();
+        const currentUser = user;
         if (user) {
           const { data } = await supabase
             .from('profiles')

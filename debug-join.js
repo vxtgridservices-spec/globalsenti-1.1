@@ -6,11 +6,17 @@ const supabaseAnonKey = 'sb_publishable_EaTeSS7wj1_f27mqIce1sg_e8oAP8T1';
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 async function debug() {
-  const { data, error } = await supabase.from('deals').select('*, profiles(tier)').eq('status', 'Available').limit(1);
+  const requestId = '00d94726-dfff-4d1f-b6b4-6eb71bf05652';
+  const { data, error } = await supabase
+    .from('requests')
+    .select('*')
+    .eq('id', requestId)
+    .single();
+
   if (error) {
-    console.error('Error querying profiles:', error);
+    console.error('Error fetching request:', error.message);
   } else {
-    console.log('Success querying profiles:', JSON.stringify(data, null, 2));
+    console.log('Request data:', JSON.stringify(data, null, 2));
   }
 }
 

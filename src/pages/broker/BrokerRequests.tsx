@@ -24,7 +24,7 @@ import {
   MessageCircle
 } from "lucide-react";
 import { supabase } from "@/src/lib/supabase";
-import { DealRoomModal } from "@/src/components/deals/DealModals";
+import { DealStageModal } from "@/src/components/deals/DealModals";
 import { ALLOWED_TRANSITIONS, DealStage, STAGE_LABELS } from "@/src/components/deals/DealStageTracker";
 
 export function BrokerRequests() {
@@ -34,70 +34,110 @@ export function BrokerRequests() {
   const [isChatModalOpen, setIsChatModalOpen] = React.useState(false);
   const [user, setUser] = React.useState<any>(null);
 
-  React.useEffect(() => {
-    const fetchRequests = async () => {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
-        setUser(user);
-
-        // 1. Fetch requests strictly assigned to this broker
-        const { data, error } = await supabase
-          .from('requests')
-          .select('*')
-          .eq('broker_id', user.id)
-          .order('created_at', { ascending: false });
-        
-        if (error) throw error;
-
-        // 2. Fetch deal titles for these requests to build the map
-        const dealIds = [...new Set((data || []).map(r => r.deal_id))];
-        const dealMap: Record<string, string> = {};
-        
-        if (dealIds.length > 0) {
-          const { data: deals } = await supabase
-            .from('deals')
-            .select('id, title')
-            .in('id', dealIds);
-          
-          (deals || []).forEach(d => {
-            dealMap[d.id] = d.title;
-          });
-        }
-        
-        // Enhance requests with deal title
-        const enhancedRequests = (data || []).map(req => ({
-          ...req,
-          dealTitle: dealMap[req.deal_id] || req.deal_id
-        }));
-
-        setRequests(enhancedRequests);
-      } catch (error) {
-        console.error("Error fetching broker requests:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchRequests();
-  }, []);
-
-  const handleStatusUpdate = async (req: any, newStage: string) => {
-    // Validate transition
-    const validTransitions = ALLOWED_TRANSITIONS[req.stage as DealStage] || [];
-    if (!validTransitions.includes(newStage as DealStage)) {
-      console.warn("Invalid transition attempted");
-      return;
-    }
-
+  const fetchRequests = async () => {
     try {
-      const { error } = await supabase
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      setUser(user);
+
+      // 1. Fetch deals managed by this broker first
+      const { data: brokerDeals } = await supabase
+        .from('deals')
+        .select('id, title')
+        .eq('broker_id', user.id);
+      
+      const brokerDealIds = (brokerDeals || []).map(d => d.id);
+      const dealMap: Record<string, string> = {};
+      brokerDeals?.forEach(d => dealMap[d.id] = d.title);
+
+      // 2. Fetch requests assigned to this broker OR for deals they list
+      let query = supabase
         .from('requests')
-        .update({ stage: newStage })
-        .eq('id', req.id);
+        .select('*');
+      
+      if (brokerDealIds.length > 0) {
+        query = query.or(`broker_id.eq.${user.id},deal_id.in.(${brokerDealIds.join(',')})`);
+      } else {
+        query = query.eq('broker_id', user.id);
+      }
+
+      const { data: requestsData, error } = await query.order('created_at', { ascending: false });
       
       if (error) throw error;
-      setRequests(requests.map(r => r.id === req.id ? { ...r, stage: newStage } : r));
+
+      // 3. Fetch any remaining deal titles if needed
+      const missingDealIds = [...new Set((requestsData || []).map(r => r.deal_id).filter(id => !dealMap[id]))];
+      if (missingDealIds.length > 0) {
+        const { data: otherDeals } = await supabase
+          .from('deals')
+          .select('id, title')
+          .in('id', missingDealIds);
+        otherDeals?.forEach(d => dealMap[d.id] = d.title);
+      }
+      
+      // Enhance requests
+      const enhancedRequests = (requestsData || []).map(req => ({
+        ...req,
+        dealTitle: dealMap[req.deal_id] || req.deal_id
+      }));
+
+      setRequests(enhancedRequests);
+    } catch (error) {
+      console.error("Error fetching broker requests:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  React.useEffect(() => {
+    fetchRequests();
+
+    const channel = supabase
+      .channel('broker-requests-sync')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'requests'
+      }, () => {
+        fetchRequests();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const handleStatusUpdate = async (requestId: string, newStatus: string) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { error } = await supabase
+        .from('requests')
+        .update({ status: newStatus, stage: newStatus === 'qualified' ? 'qualified' : undefined })
+        .eq('id', requestId);
+      
+      if (error) throw error;
+      
+      // Send protocol message
+      const targetReq = requests.find(r => r.id === requestId);
+      if (targetReq) {
+        // Fetch broker role for record keeping
+        const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+        
+        await supabase.from('messages').insert([{
+          request_id: targetReq.id,
+          deal_id: targetReq.deal_id,
+          buyer_id: targetReq.metadata?.buyer_id || null,
+          sender_id: user.id,
+          sender_role: profile?.role || 'broker',
+          body: `[PROTOCOL UPDATE] Broker updated status to: ${newStatus.toUpperCase()}`,
+          message: `[PROTOCOL UPDATE] Broker updated status to: ${newStatus.toUpperCase()}`
+        }]);
+      }
+
+      setRequests(requests.map(r => r.id === requestId ? { ...r, status: newStatus, stage: newStatus === 'qualified' ? 'qualified' : r.stage } : r));
     } catch (error) {
       console.error("Error updating request stage:", error);
     }
@@ -216,7 +256,7 @@ export function BrokerRequests() {
       </div>
       
       {selectedRequest && (
-        <DealRoomModal 
+        <DealStageModal 
           isOpen={isChatModalOpen}
           onClose={() => setIsChatModalOpen(false)}
           deal={{ id: selectedRequest.deal_id, title: selectedRequest.dealTitle || "Requested Deal", broker_id: user?.id || "unassigned" } as any}
