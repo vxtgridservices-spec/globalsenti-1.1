@@ -2,20 +2,37 @@ import * as React from "react";
 import { supabase } from "@/src/lib/supabase";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
-import { Send, Loader2, ShieldCheck, CheckCheck, Clock, Info, Check } from "lucide-react";
+import { Send, Loader2, ShieldCheck, CheckCheck, Clock, Info, Check, ChevronDown, ChevronUp, FileCode } from "lucide-react";
 import { cn } from "@/src/lib/utils";
+import { FundingInstructions } from "./FundingInstructions";
+import { ContractModule } from "./ContractModule";
+import { EscrowTracker } from "./EscrowTracker";
+import { DEAL_STAGES, DealStage } from "./DealStageTracker";
+import { Deal } from "@/src/data/deals";
 
 interface ChatPanelProps {
   requestId: string;
+  userRequest?: any;
+  userRole?: string | null;
+  deal?: Deal;
 }
 
-export function ChatPanel({ requestId }: ChatPanelProps) {
+export function ChatPanel({ requestId, userRequest, userRole: propRole, deal: propDeal }: ChatPanelProps) {
   const [messages, setMessages] = React.useState<any[]>([]);
   const [newMessage, setNewMessage] = React.useState("");
   const [loading, setLoading] = React.useState(true);
   const [currentUser, setCurrentUser] = React.useState<any>(null);
-  const [userRole, setUserRole] = React.useState<string | null>(null);
-  
+  const [userRole, setUserRole] = React.useState<string | null>(propRole || null);
+  const [isProtocolVisible, setIsProtocolVisible] = React.useState(true);
+  const [roleLoading, setRoleLoading] = React.useState(!propRole);
+
+  // Sync role from prop if it changes
+  React.useEffect(() => {
+    if (propRole) {
+      setUserRole(propRole);
+      setRoleLoading(false);
+    }
+  }, [propRole]);
   // Real-time presence (simulated or based on pulse)
   const [participants, setParticipants] = React.useState<Record<string, { role: string, status: string }>>({});
 
@@ -56,7 +73,27 @@ export function ChatPanel({ requestId }: ChatPanelProps) {
     if (!requestId) return;
     
     let isActive = true;
-    let channel: any;
+    
+    // 1. Initialize channel synchronously to ensure cleanup has a reference
+    // and to prevent adding listeners after subscribe if remount occurs rapidly.
+    const channelName = `room-secure-${requestId}`;
+    const channel = supabase
+      .channel(channelName)
+      .on('postgres_changes', { 
+        event: 'INSERT', 
+        schema: 'public', 
+        table: 'messages',
+        filter: `request_id=eq.${requestId}`
+      }, (payload: any) => {
+        if (!isActive) return;
+        const newMsg = payload.new;
+        
+        setMessages(prev => {
+          if (prev.some(m => m.id === newMsg.id)) return prev;
+          return [...prev, newMsg];
+        });
+      })
+      .subscribe();
 
     const initChat = async () => {
       try {
@@ -74,6 +111,7 @@ export function ChatPanel({ requestId }: ChatPanelProps) {
           if (data && isActive) {
             setUserRole(data.role);
             currentRole = data.role;
+            setRoleLoading(false);
           }
         }
 
@@ -116,26 +154,6 @@ export function ChatPanel({ requestId }: ChatPanelProps) {
         }
         
         if (isActive) setLoading(false);
-
-        // Subscribe to real-time changes
-        channel = supabase
-          .channel(`room-secure-${requestId}`)
-          .on('postgres_changes', { 
-            event: 'INSERT', 
-            schema: 'public', 
-            table: 'messages',
-            filter: `request_id=eq.${requestId}`
-          }, (payload: any) => {
-            if (!isActive) return;
-            const newMsg = payload.new;
-            
-            setMessages(prev => {
-              if (prev.some(m => m.id === newMsg.id)) return prev;
-              return [...prev, newMsg];
-            });
-          })
-          .subscribe();
-
       } catch (err) {
         console.error("Chat Init Error:", err);
         if (isActive) setLoading(false);
@@ -146,7 +164,7 @@ export function ChatPanel({ requestId }: ChatPanelProps) {
 
     return () => {
       isActive = false;
-      if (channel) supabase.removeChannel(channel);
+      supabase.removeChannel(channel);
     };
   }, [requestId]);
 
@@ -227,7 +245,84 @@ export function ChatPanel({ requestId }: ChatPanelProps) {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-8 scrollbar-hide">
+      <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-8 scrollbar-hide flex flex-col">
+        {/* Protocol Integration Section (Rule 3) */}
+        {!loading && !roleLoading && userRequest && (
+          <div className="mb-8 space-y-4 shrink-0">
+            <div 
+              className="flex items-center justify-between px-4 py-2 bg-white/[0.03] border border-white/5 rounded-xl cursor-pointer hover:bg-white/[0.05] transition-colors"
+              onClick={() => setIsProtocolVisible(!isProtocolVisible)}
+            >
+              <div className="flex items-center gap-2">
+                <FileCode className="w-4 h-4 text-gold" />
+                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white">Protocol & Settlement Stack</span>
+              </div>
+              {isProtocolVisible ? <ChevronUp className="w-4 h-4 text-gray-500" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}
+            </div>
+
+            {isProtocolVisible && (
+              <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                {/* 1. Contract Module visibility check */}
+                {/* Admin Prepping: Stage >= due_diligence */}
+                {/* Buyer/Broker Review: Stage >= contract_issued */}
+                {(
+                  (userRole === 'admin' && DEAL_STAGES.indexOf(userRequest.stage as DealStage) >= DEAL_STAGES.indexOf('due_diligence')) ||
+                  (userRole !== 'admin' && DEAL_STAGES.indexOf(userRequest.stage as DealStage) >= DEAL_STAGES.indexOf('contract_issued'))
+                ) && (
+                  <ContractModule 
+                    requestId={requestId}
+                    dealId={userRequest.deal_id}
+                    isAdmin={userRole === 'admin'}
+                    deal={propDeal || {
+                      id: userRequest.deal_id,
+                      commodityType: userRequest.metadata?.commodity || "Asset",
+                      title: userRequest.metadata?.title || "Secured Deal",
+                      pricing: (propDeal as any)?.pricing || {},
+                      logistics: (propDeal as any)?.logistics || {}
+                    } as any}
+                    userRequest={userRequest}
+                    userRole={userRole || undefined}
+                  />
+                )}
+
+                {/* 3. Escrow Tracker Section */}
+                {DEAL_STAGES.indexOf(userRequest.stage as DealStage) >= DEAL_STAGES.indexOf('escrow') && (
+                  <EscrowTracker 
+                    requestId={requestId}
+                    dealId={userRequest.deal_id}
+                    buyerId={userRequest.metadata?.buyer_id}
+                    isAdmin={userRole === 'admin'}
+                    userRequest={userRequest}
+                  />
+                )}
+
+                {/* 2. Funding Instructions visibility check */}
+                {/* Admin Prepping: Stage >= due_diligence */}
+                {/* Buyer/Broker Info: Stage >= escrow */}
+                {(
+                  (userRole === 'admin' && DEAL_STAGES.indexOf(userRequest.stage as DealStage) >= DEAL_STAGES.indexOf('due_diligence')) ||
+                  (userRole !== 'admin' && DEAL_STAGES.indexOf(userRequest.stage as DealStage) >= DEAL_STAGES.indexOf('escrow'))
+                ) && (
+                  <FundingInstructions 
+                    requestId={requestId}
+                    paymentMethod={userRequest.payment_method || "USDT Crypto"}
+                    isAdmin={userRole === 'admin'}
+                    buyerId={userRequest.metadata?.buyer_id}
+                    stage={userRequest.stage}
+                    userRequest={userRequest}
+                  />
+                )}
+              </div>
+            )}
+            
+            <div className="flex items-center gap-3 py-2">
+              <div className="h-px flex-1 bg-white/5" />
+              <span className="text-[7px] text-gray-700 font-bold uppercase tracking-[0.3em]">Negotiation Logs Below</span>
+              <div className="h-px flex-1 bg-white/5" />
+            </div>
+          </div>
+        )}
+
         {loading ? (
           <div className="flex flex-col items-center justify-center h-full gap-4 text-gray-500">
             <Loader2 className="animate-spin text-gold w-8 h-8" />

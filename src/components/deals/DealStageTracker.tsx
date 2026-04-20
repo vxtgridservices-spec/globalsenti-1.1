@@ -2,59 +2,60 @@ import * as React from "react";
 import { Check, Dot, AlertCircle } from "lucide-react";
 
 export const DEAL_STAGES = [
-  "expression_of_interest",
-  "under_review",
-  "prospect_qualified",
-  "deal_negotiation",
+  "interest",
+  "review",
+  "qualified",
+  "negotiation",
   "due_diligence",
   "terms_agreed",
   "contract_issued",
-  "execution_and_escrow",
-  "deal_closed",
-  "reject_transaction"
+  "escrow",
+  "closed",
+  "rejected"
 ] as const;
 
 export type DealStage = typeof DEAL_STAGES[number];
 
 export const STAGE_LABELS: Record<DealStage, string> = {
-  expression_of_interest: "Expression of Interest",
-  under_review: "Under Review",
-  prospect_qualified: "Prospect Qualified",
-  deal_negotiation: "Deal Negotiation",
+  interest: "Expression of Interest",
+  review: "Under Review",
+  qualified: "Prospect Qualified",
+  negotiation: "Deal Negotiation",
   due_diligence: "Due Diligence",
   terms_agreed: "Terms Agreed",
   contract_issued: "Contract Issued",
-  execution_and_escrow: "Execution & Escrow",
-  deal_closed: "Deal Closed",
-  reject_transaction: "Transaction Rejected"
+  escrow: "Execution & Escrow",
+  closed: "Deal Closed",
+  rejected: "Transaction Rejected"
 };
 
 export const ALLOWED_TRANSITIONS: Record<DealStage, DealStage[]> = {
-  expression_of_interest: ["under_review"],
-  under_review: ["prospect_qualified", "reject_transaction"],
-  prospect_qualified: ["deal_negotiation", "reject_transaction"],
-  deal_negotiation: ["due_diligence", "reject_transaction"],
-  due_diligence: ["terms_agreed", "reject_transaction"],
-  terms_agreed: ["contract_issued", "reject_transaction"],
-  contract_issued: ["execution_and_escrow", "reject_transaction"],
-  execution_and_escrow: ["deal_closed", "reject_transaction"],
-  deal_closed: [],
-  reject_transaction: []
+  interest: ["review", "rejected"],
+  review: ["qualified", "rejected"],
+  qualified: ["negotiation", "rejected"],
+  negotiation: ["due_diligence", "rejected"],
+  due_diligence: ["terms_agreed", "rejected"],
+  terms_agreed: ["contract_issued", "rejected"],
+  contract_issued: ["escrow", "rejected"],
+  escrow: ["closed", "rejected"],
+  closed: [],
+  rejected: ["interest"] // Allow resetting for retries
 };
 
 export const ROLE_PERMISSIONS: Record<string, DealStage[]> = {
   admin: [
-    "under_review",
-    "prospect_qualified",
-    "deal_negotiation",
+    "interest",
+    "review",
+    "qualified",
+    "negotiation",
     "due_diligence",
     "terms_agreed",
     "contract_issued",
-    "execution_and_escrow",
-    "deal_closed",
-    "reject_transaction"
+    "escrow",
+    "closed",
+    "rejected"
   ],
-  broker: ["deal_negotiation", "due_diligence", "reject_transaction"], // Allowed to advance to/reject at specific stages
+  broker: ["negotiation", "due_diligence", "terms_agreed", "rejected"], // Allowed to advance to/reject at specific stages
   buyer: [] // Cannot change stage
 };
 
@@ -90,7 +91,7 @@ export function DealStageTracker({ currentStage = "interest", isAdmin = false, o
               onChange={(e) => onUpdateStage(e.target.value as DealStage)}
               className="bg-black/40 border border-white/10 text-white text-xs font-bold uppercase tracking-widest rounded-lg px-4 py-2 focus:ring-1 focus:ring-gold outline-none"
             >
-              {(["negotiation", "due_diligence", "terms_agreed", "contract_issued", "closed"] as DealStage[]).map(stage => (
+              {DEAL_STAGES.map(stage => (
                 <option key={stage} value={stage} className="bg-black text-white">
                   {STAGE_LABELS[stage]}
                 </option>

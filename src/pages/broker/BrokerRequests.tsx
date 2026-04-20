@@ -113,9 +113,10 @@ export function BrokerRequests() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
+      const stage = newStatus === 'qualified' ? 'qualified' : newStatus === 'rejected' ? 'rejected' : undefined;
       const { error } = await supabase
         .from('requests')
-        .update({ status: newStatus, stage: newStatus === 'qualified' ? 'qualified' : undefined })
+        .update({ status: newStatus, stage })
         .eq('id', requestId);
       
       if (error) throw error;
@@ -137,7 +138,7 @@ export function BrokerRequests() {
         }]);
       }
 
-      setRequests(requests.map(r => r.id === requestId ? { ...r, status: newStatus, stage: newStatus === 'qualified' ? 'qualified' : r.stage } : r));
+      setRequests(requests.map(r => r.id === requestId ? { ...r, status: newStatus, stage: stage || r.stage } : r));
     } catch (error) {
       console.error("Error updating request stage:", error);
     }

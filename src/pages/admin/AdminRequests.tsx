@@ -129,6 +129,8 @@ export function AdminRequests() {
       const updateData: any = { status: newStatus };
       if (newStatus === 'qualified') {
         updateData.stage = 'qualified';
+      } else if (newStatus === 'rejected') {
+        updateData.stage = 'rejected';
       }
       
       const { error } = await supabase

@@ -355,9 +355,9 @@ export function DealStageModal({
         deal_id: userRequest.deal_id,
         buyer_id: userRequest.metadata?.buyer_id || null,
         sender_id: currentUser.id,
-        sender_role: userRole || 'officer',
-        body: `[PROTOCOL UPDATE] Stage updated: ${oldLabel} → ${newLabel}`,
-        message: `[PROTOCOL UPDATE] Stage updated: ${oldLabel} → ${newLabel}`
+        sender_role: userRole || 'admin',
+        body: `[PROTOCOL UPDATE] Transaction stage advanced: ${newLabel.toUpperCase()}`,
+        message: `[PROTOCOL UPDATE] Transaction stage advanced: ${newLabel.toUpperCase()}`
       }]);
     } catch (err) {
       console.error("Failed to update status", err);
@@ -416,7 +416,12 @@ export function DealStageModal({
 
         <div className="flex-1 overflow-hidden p-0">
           {activeTab === 'chat' ? (
-            <ChatPanel requestId={userRequest?.id} />
+            <ChatPanel 
+              requestId={userRequest?.id} 
+              userRequest={userRequest}
+              userRole={userRole}
+              deal={deal}
+            />
           ) : (
             <div className="space-y-6 p-6">
               {userRequest && (
@@ -430,7 +435,7 @@ export function DealStageModal({
                       {(ALLOWED_TRANSITIONS[currentStage as DealStage] || [])
                         .filter(s => !userRole || (ROLE_PERMISSIONS[userRole] || []).includes(s) || userRole === 'admin')
                         .map((s) => (
-                        <SelectItem key={s} value={s} className={`text-[10px] font-bold uppercase tracking-widest ${s === 'reject_transaction' ? 'text-red-500' : ''}`}>
+                        <SelectItem key={s} value={s} className={`text-[10px] font-bold uppercase tracking-widest ${s === 'rejected' ? 'text-red-500' : ''}`}>
                           {STAGE_LABELS[s]}
                         </SelectItem>
                       ))}

@@ -9,9 +9,10 @@ import { PageLayout } from "@/src/components/layout/PageLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui/card";
 import { Button } from "@/src/components/ui/button";
 import { motion } from "motion/react";
-import { DealStageTracker, DealStage } from "@/src/components/deals/DealStageTracker";
+import { DealStageTracker, DealStage, DEAL_STAGES } from "@/src/components/deals/DealStageTracker";
 import { EscrowTracker } from "@/src/components/deals/EscrowTracker";
 import { FundingInstructions } from "@/src/components/deals/FundingInstructions";
+import { ContractModule } from "@/src/components/deals/ContractModule";
 import { PurchaseRequestModal, DealStageModal } from "@/src/components/deals/DealModals";
 
 export function DealManifest() {
@@ -91,10 +92,10 @@ export function DealManifest() {
       startY: currentY,
       head: [["Financial Field", "Details"]],
       body: [
-        ["Pricing Type", dealData.pricing.type],
-        ["Market Position", dealData.pricing.marketPosition],
-        ["Currency", dealData.pricing.currency],
-        ["Payment Terms", dealData.pricing.paymentTerms]
+        ["Pricing Type", dealData.pricing?.type || "Standard"],
+        ["Market Position", dealData.pricing?.marketPosition || "Market Value"],
+        ["Currency", dealData.pricing?.currency || "USD"],
+        ["Payment Terms", dealData.pricing?.paymentTerms || "Wire Transfer"]
       ],
       theme: "striped",
       headStyles: { fillColor: gold, textColor: black, fontStyle: "bold" },
@@ -114,10 +115,10 @@ export function DealManifest() {
       startY: currentY,
       head: [["Logistics Component", "Protocol"]],
       body: [
-        ["Delivery Terms", dealData.logistics.deliveryTerms],
-        ["Shipping Port", dealData.logistics.shippingPort],
-        ["Inspection Agency", dealData.logistics.inspectionAgency],
-        ["Insurance", dealData.logistics.insurance]
+        ["Delivery Terms", dealData.logistics?.deliveryTerms || "TBD"],
+        ["Shipping Port", dealData.logistics?.shippingPort || "TBD"],
+        ["Inspection Agency", dealData.logistics?.inspectionAgency || "TBD"],
+        ["Insurance", dealData.logistics?.insurance || "Standard"]
       ],
       theme: "striped",
       headStyles: { fillColor: gold, textColor: black, fontStyle: "bold" },
@@ -139,7 +140,7 @@ export function DealManifest() {
     doc.text("SECTION 4: VERIFIED DOCUMENTATION", 20, currentY);
     currentY += 10;
 
-    const docItems = dealData.documents.map(d => [d.name, d.size]);
+    const docItems = (dealData.documents || []).map(d => [d.name, d.size]);
     autoTable(doc, {
       startY: currentY,
       head: [["Document Name", "Status / Size"]],
@@ -162,9 +163,9 @@ export function DealManifest() {
       startY: currentY,
       head: [["Condition", "Requirement"]],
       body: [
-        ["Minimum Order (MOQ)", dealData.conditions.moq],
-        ["Contract Duration", dealData.conditions.contractDuration],
-        ["Exclusivity Terms", dealData.conditions.exclusivity]
+        ["Minimum Order (MOQ)", dealData.conditions?.moq || "TBD"],
+        ["Contract Duration", dealData.conditions?.contractDuration || "TBD"],
+        ["Exclusivity Terms", dealData.conditions?.exclusivity || "TBD"]
       ],
       theme: "striped",
       headStyles: { fillColor: gold, textColor: black, fontStyle: "bold" },
@@ -260,6 +261,7 @@ export function DealManifest() {
   React.useEffect(() => {
     if (!userRequest?.id) return;
 
+    // Section: Real-time Protocol Synchronization
     const channel = supabase
       .channel(`manifest-sync-${userRequest.id}`)
       .on('postgres_changes', {
@@ -268,10 +270,9 @@ export function DealManifest() {
         table: 'requests',
         filter: `id=eq.${userRequest.id}`
       }, (payload) => {
-        setUserRequest((prev: any) => {
-          if (!prev) return payload.new;
-          return { ...prev, ...payload.new };
-        });
+        // Rule 3: Direct state injection from DB source of truth
+        setUserRequest(payload.new);
+        console.log("[PROTOCOL SYNC] Stage Advanced:", payload.new.stage);
       })
       .subscribe();
 
@@ -348,14 +349,21 @@ export function DealManifest() {
       // Protocol Log
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
+        let logMessage = `[PROTOCOL UPDATE] Manual stage transition to: ${newStage.toUpperCase().replace('_', ' ')}`;
+        if (newStage === 'escrow') {
+          logMessage = `[System] Execution & Escrow activated`;
+        } else if (newStage === 'closed') {
+          logMessage = `[System] Deal Closed. Transaction successfully settled.`;
+        }
+
         await supabase.from("messages").insert([{
           request_id: userRequest.id,
           deal_id: userRequest.deal_id,
           buyer_id: userRequest.metadata?.buyer_id || null,
           sender_id: user.id,
           sender_role: userProfile?.role || 'admin',
-          body: `[PROTOCOL UPDATE] Manual stage transition to: ${newStage.toUpperCase().replace('_', ' ')}`,
-          message: `[PROTOCOL UPDATE] Manual stage transition to: ${newStage.toUpperCase().replace('_', ' ')}`
+          body: logMessage,
+          message: logMessage
         }]);
       }
     } catch (err) {
@@ -420,8 +428,10 @@ export function DealManifest() {
       case "due_diligence": return "Due Diligence Ongoing";
       case "terms_agreed": return "Terms Agreed";
       case "contract_issued": return "Contract Issued";
+      case "escrow": return "Execution & Escrow";
       case "closed": return "Deal Closed";
-      default: return "";
+      case "rejected": return "Request Terminated";
+      default: return stage;
     }
   };
 
@@ -524,19 +534,19 @@ export function DealManifest() {
                 <CardContent className="space-y-4">
                   <div className="flex justify-between py-2 border-b border-white/5">
                     <span className="text-gray-400 text-sm">Pricing Type</span>
-                    <span className="text-white font-medium">{dealData.pricing.type}</span>
+                    <span className="text-white font-medium">{dealData.pricing?.type || "Standard"}</span>
                   </div>
                   <div className="flex justify-between py-2 border-b border-white/5">
                     <span className="text-gray-400 text-sm">Market Position</span>
-                    <span className="text-gold font-bold">{dealData.pricing.marketPosition}</span>
+                    <span className="text-gold font-bold">{dealData.pricing?.marketPosition || "Market Value"}</span>
                   </div>
                   <div className="flex justify-between py-2 border-b border-white/5">
                     <span className="text-gray-400 text-sm">Currency</span>
-                    <span className="text-white font-medium">{dealData.pricing.currency}</span>
+                    <span className="text-white font-medium">{dealData.pricing?.currency || "USD"}</span>
                   </div>
                   <div className="flex justify-between py-2">
                     <span className="text-gray-400 text-sm">Payment Terms</span>
-                    <span className="text-white font-medium">{dealData.pricing.paymentTerms}</span>
+                    <span className="text-white font-medium">{dealData.pricing?.paymentTerms || "Wire Transfer"}</span>
                   </div>
                 </CardContent>
               </Card>
@@ -550,19 +560,19 @@ export function DealManifest() {
                 <CardContent className="space-y-4">
                   <div className="flex justify-between py-2 border-b border-white/5">
                     <span className="text-gray-400 text-sm">Delivery Terms</span>
-                    <span className="text-white font-medium">{dealData.logistics.deliveryTerms}</span>
+                    <span className="text-white font-medium">{dealData.logistics?.deliveryTerms || "TBD"}</span>
                   </div>
                   <div className="flex justify-between py-2 border-b border-white/5">
                     <span className="text-gray-400 text-sm">Shipping Port</span>
-                    <span className="text-white font-medium">{dealData.logistics.shippingPort}</span>
+                    <span className="text-white font-medium">{dealData.logistics?.shippingPort || "TBD"}</span>
                   </div>
                   <div className="flex justify-between py-2 border-b border-white/5">
                     <span className="text-gray-400 text-sm">Inspection Agency</span>
-                    <span className="text-white font-medium">{dealData.logistics.inspectionAgency}</span>
+                    <span className="text-white font-medium">{dealData.logistics?.inspectionAgency || "TBD"}</span>
                   </div>
                   <div className="flex justify-between py-2">
                     <span className="text-gray-400 text-sm">Insurance</span>
-                    <span className="text-white font-medium">{dealData.logistics.insurance}</span>
+                    <span className="text-white font-medium">{dealData.logistics?.insurance || "Standard"}</span>
                   </div>
                 </CardContent>
               </Card>
@@ -606,15 +616,15 @@ export function DealManifest() {
               <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="p-4 rounded-xl bg-white/5 border border-white/5">
                   <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-1">Min Order Quantity</p>
-                  <p className="text-white font-bold">{dealData.conditions.moq}</p>
+                  <p className="text-white font-bold">{dealData.conditions?.moq || "TBD"}</p>
                 </div>
                 <div className="p-4 rounded-xl bg-white/5 border border-white/5">
                   <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-1">Contract Duration</p>
-                  <p className="text-white font-bold">{dealData.conditions.contractDuration}</p>
+                  <p className="text-white font-bold">{dealData.conditions?.contractDuration || "TBD"}</p>
                 </div>
                 <div className="p-4 rounded-xl bg-white/5 border border-white/5">
                   <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-1">Exclusivity</p>
-                  <p className="text-white font-bold">{dealData.conditions.exclusivity}</p>
+                  <p className="text-white font-bold">{dealData.conditions?.exclusivity || "TBD"}</p>
                 </div>
               </CardContent>
             </Card>
@@ -654,27 +664,6 @@ export function DealManifest() {
               </CardContent>
             </Card>
 
-            {/* Funding Instructions - Appears after Due Diligence */}
-            {userRequest && ["due_diligence", "terms_agreed", "contract_issued", "execution_and_escrow", "deal_closed"].includes(currentStage) && (
-              <FundingInstructions
-                requestId={userRequest.id}
-                paymentMethod={userRequest.metadata?.payment_method || "Wire Transfer"}
-                isAdmin={isAdmin || userProfile?.role === 'broker'}
-                buyerId={userRequest.metadata?.buyer_id}
-                stage={currentStage}
-              />
-            )}
-
-            {/* Escrow Tracker - Appears after Terms Agreed */}
-            {userRequest && ["terms_agreed", "contract_issued", "execution_and_escrow", "deal_closed"].includes(currentStage) && (
-              <EscrowTracker 
-                dealId={dealData.id}
-                buyerId={userRequest.metadata?.buyer_id}
-                isAdmin={isAdmin}
-                onEscrowSecured={() => handleUpdateStage("execution_and_escrow")}
-                onEscrowReleased={() => handleUpdateStage("deal_closed")}
-              />
-            )}
 
             {/* Stage Tracker - Appears above actions if there is a request - Facilitators ONLY */}
             {userRequest && userProfile?.role !== 'buyer' && (

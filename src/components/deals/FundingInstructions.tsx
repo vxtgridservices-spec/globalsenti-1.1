@@ -11,9 +11,10 @@ interface FundingInstructionsProps {
   isAdmin: boolean;
   buyerId?: string;
   stage?: string;
+  userRequest?: any;
 }
 
-export function FundingInstructions({ requestId, paymentMethod, isAdmin, buyerId, stage }: FundingInstructionsProps) {
+export function FundingInstructions({ requestId, paymentMethod, isAdmin, buyerId, stage, userRequest }: FundingInstructionsProps) {
   const [instructions, setInstructions] = React.useState<any>(null);
   const [loading, setLoading] = React.useState(true);
   const [isEditing, setIsEditing] = React.useState(false);
@@ -35,7 +36,18 @@ export function FundingInstructions({ requestId, paymentMethod, isAdmin, buyerId
         .limit(1)
         .maybeSingle();
 
-      if (!error && data) {
+      if (error) {
+        if (error.code === '42P01' || error.message.includes('funding_instructions')) {
+          if (userRequest?.metadata?.funding_details) {
+            setInstructions(userRequest.metadata.funding_details);
+            setFormData(userRequest.metadata.funding_details.details || {});
+          }
+          return;
+        }
+        throw error;
+      }
+
+      if (data) {
         setInstructions(data);
         setFormData(data.details || {});
       }
@@ -70,11 +82,13 @@ export function FundingInstructions({ requestId, paymentMethod, isAdmin, buyerId
       }
 
       const payload = {
+        id: instructions?.id || crypto.randomUUID(),
         request_id: requestId,
         payment_method: paymentMethod,
         details: { ...formData, has_critical_changes: criticalChanged },
         locked: false,
         version: newVersion,
+        created_at: new Date().toISOString()
       };
 
       const { data, error } = await supabase
@@ -83,16 +97,16 @@ export function FundingInstructions({ requestId, paymentMethod, isAdmin, buyerId
         .select()
         .single();
         
-      if (error) {
-        if (error.code === '42P01') {
-           alert("Table 'funding_instructions' not created. Please create it first in Supabase.");
-           setSaving(false);
-           return;
-        }
+      if (error && (error.code === '42P01' || error.message.includes('funding_instructions'))) {
+        const newMetadata = { ...(userRequest.metadata || {}), funding_details: payload };
+        await supabase.from('requests').update({ metadata: newMetadata }).eq('id', requestId);
+        setInstructions(payload);
+      } else if (error) {
         throw error;
+      } else if (data) {
+        setInstructions(data);
       }
       
-      setInstructions(data);
       setIsEditing(false);
       
       // Notify via secure room
@@ -143,13 +157,22 @@ export function FundingInstructions({ requestId, paymentMethod, isAdmin, buyerId
   const handleConfirm = async () => {
     if (!instructions) return;
     try {
+      const updatedInstructions = { ...instructions, locked: true };
+
       const { error } = await supabase
         .from('funding_instructions')
         .update({ locked: true })
         .eq('id', instructions.id);
       
-      if (error) throw error;
-      setInstructions({ ...instructions, locked: true });
+      if (error && (error.code === '42P01' || error.message.includes('funding_instructions'))) {
+        const newMetadata = { ...(userRequest.metadata || {}), funding_details: updatedInstructions };
+        await supabase.from('requests').update({ metadata: newMetadata }).eq('id', requestId);
+        setInstructions(updatedInstructions);
+      } else if (error) {
+        throw error;
+      } else {
+        setInstructions(updatedInstructions);
+      }
       
       // Broadcast to room
       const msg = `[COMPLIANCE] Funding instructions locked and confirmed by buyer. Ready for settlement.`;
