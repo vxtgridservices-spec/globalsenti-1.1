@@ -10,6 +10,7 @@ export const DEAL_STAGES = [
   "terms_agreed",
   "contract_issued",
   "escrow",
+  "shipment",
   "closed",
   "rejected"
 ] as const;
@@ -25,6 +26,7 @@ export const STAGE_LABELS: Record<DealStage, string> = {
   terms_agreed: "Terms Agreed",
   contract_issued: "Contract Issued",
   escrow: "Execution & Escrow",
+  shipment: "Global Logistics",
   closed: "Deal Closed",
   rejected: "Transaction Rejected"
 };
@@ -37,7 +39,8 @@ export const ALLOWED_TRANSITIONS: Record<DealStage, DealStage[]> = {
   due_diligence: ["terms_agreed", "rejected"],
   terms_agreed: ["contract_issued", "rejected"],
   contract_issued: ["escrow", "rejected"],
-  escrow: ["closed", "rejected"],
+  escrow: ["shipment", "rejected"],
+  shipment: ["closed", "rejected"],
   closed: [],
   rejected: ["interest"] // Allow resetting for retries
 };
@@ -52,10 +55,11 @@ export const ROLE_PERMISSIONS: Record<string, DealStage[]> = {
     "terms_agreed",
     "contract_issued",
     "escrow",
+    "shipment",
     "closed",
     "rejected"
   ],
-  broker: ["negotiation", "due_diligence", "terms_agreed", "rejected"], // Allowed to advance to/reject at specific stages
+  broker: ["negotiation", "due_diligence", "terms_agreed", "shipment", "rejected"], // Allowed to advance to/reject at specific stages
   buyer: [] // Cannot change stage
 };
 

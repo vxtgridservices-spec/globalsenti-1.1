@@ -192,8 +192,15 @@ export function EscrowTracker({ requestId, dealId, buyerId, brokerId, isAdmin, u
         await logProtocolEvent(logMsg);
       }
 
-      if (newStatus === ESCROW_STATES.FUNDS_VERIFIED && onEscrowSecured) {
-        onEscrowSecured();
+      if (newStatus === ESCROW_STATES.FUNDS_VERIFIED) {
+        // Step 11: Automatic stage advancement to Shipment
+        try {
+          await supabase.from('requests').update({ stage: 'shipment' }).eq('id', requestId);
+          await logProtocolEvent("Funding verified. Global Sentinel Group has advanced the transaction to GLOBAL LOGISTICS.");
+        } catch (err) {
+          console.error("Failed to advance stage to shipment", err);
+        }
+        if (onEscrowSecured) onEscrowSecured();
       } else if (newStatus === ESCROW_STATES.RELEASED) {
         // Step 10: Automatic stage advancement to Deal Closed
         try {
@@ -204,6 +211,11 @@ export function EscrowTracker({ requestId, dealId, buyerId, brokerId, isAdmin, u
         }
         if (onEscrowReleased) onEscrowReleased();
       } else if (newStatus === ESCROW_STATES.FAILED) {
+        try {
+          await supabase.from('requests').update({ status: 'failed', stage: 'rejected' }).eq('id', requestId);
+        } catch (err) {
+          console.error("Failed to mark request as failed", err);
+        }
         await logProtocolEvent("Escrow protocol FAILURE. Transaction flag set for manual review.");
       }
     } catch (err) {
@@ -288,6 +300,12 @@ export function EscrowTracker({ requestId, dealId, buyerId, brokerId, isAdmin, u
   const statusDisplay = getStatusDisplay();
   const isBuyer = currentUser?.id === (buyerId || userRequest?.metadata?.buyer_id);
   const isBroker = currentUser?.id === (brokerId || userRequest?.broker_id);
+
+  const shipment = userRequest?.metadata?.shipment;
+  const canRelease = isAdmin && (
+    shipment?.status === "delivered" || 
+    (shipment?.status === "inspection_passed" && shipment?.buyer_approved_inspection)
+  );
 
   return (
     <div className="bg-secondary/40 border border-white/5 rounded-2xl p-6 relative overflow-hidden group">
@@ -403,7 +421,15 @@ export function EscrowTracker({ requestId, dealId, buyerId, brokerId, isAdmin, u
                <Button size="sm" variant="outline" className="h-8 border-yellow-500/30 text-yellow-500 hover:bg-yellow-500/10 text-[9px] font-black uppercase tracking-wider" onClick={() => handleUpdateEscrow(ESCROW_STATES.FUNDING_AWAITED, "Administration reset window to Funding Awaited.")}>Awaiting</Button>
                <Button size="sm" variant="outline" className="h-8 border-blue-400/30 text-blue-400 hover:bg-blue-400/10 text-[9px] font-black uppercase tracking-wider" onClick={() => handleUpdateEscrow(ESCROW_STATES.FUNDED, "Administration manually marked as Funded.")}>Funded</Button>
                <Button size="sm" variant="outline" className="h-8 border-green-500/30 text-green-500 hover:bg-green-500/10 text-[9px] font-black uppercase tracking-wider" onClick={() => handleUpdateEscrow(ESCROW_STATES.FUNDS_VERIFIED, "Compliance verified funds. Settlement authenticated.")}>Verify</Button>
-               <Button size="sm" variant="outline" className="h-8 border-blue-500/30 text-blue-500 hover:bg-blue-500/10 text-[9px] font-black uppercase tracking-wider" onClick={() => handleUpdateEscrow(ESCROW_STATES.RELEASED, "Protocol Release triggered. Settlement final.")}>Release</Button>
+               <Button 
+                size="sm" 
+                variant="outline" 
+                className={`h-8 text-[9px] font-black uppercase tracking-wider ${!canRelease ? 'opacity-30 cursor-not-allowed border-white/10' : 'border-blue-500/30 text-blue-500 hover:bg-blue-500/10'}`} 
+                onClick={() => canRelease && handleUpdateEscrow(ESCROW_STATES.RELEASED, "Protocol Release triggered. Settlement final.")}
+                disabled={!canRelease}
+               >
+                Release
+               </Button>
                <Button size="sm" variant="outline" className="h-8 border-red-500/30 text-red-500 hover:bg-red-500/10 text-[9px] font-black uppercase tracking-wider" onClick={() => handleUpdateEscrow(ESCROW_STATES.FAILED, "Escrow status manually failed by admin review.")}>Fail</Button>
             </div>
           )}

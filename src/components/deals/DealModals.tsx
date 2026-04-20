@@ -25,11 +25,13 @@ import {
   CheckCircle2,
   Loader2,
   Activity,
+  Truck,
 } from "lucide-react";
 import { Deal } from "@/src/data/deals";
 import { supabase } from "@/src/lib/supabase";
 import { ALLOWED_TRANSITIONS, STAGE_LABELS, DealStage, ROLE_PERMISSIONS } from "./DealStageTracker";
 import { ChatPanel } from "./ChatPanel";
+import { ShipmentTracker } from "./ShipmentTracker";
 
 interface ModalProps {
   isOpen: boolean;
@@ -268,7 +270,10 @@ export function DealStageModal({
   const [currentUser, setCurrentUser] = React.useState<any>(null);
   const [userRole, setUserRole] = React.useState<string | null>(null);
   const [currentStage, setCurrentStage] = React.useState<string>(userRequest?.stage || "interest");
-  const [activeTab, setActiveTab] = React.useState<'chat' | 'stage'>(userRole === 'buyer' ? 'chat' : 'chat');
+  const [activeTab, setActiveTab] = React.useState<'chat' | 'stage' | 'shipment'>('chat');
+
+  const escrowStatus = userRequest?.metadata?.escrow?.status;
+  const isFunded = escrowStatus === 'funded' || escrowStatus === 'funds_verified' || escrowStatus === 'released';
 
   // Realtime stage sync
   React.useEffect(() => {
@@ -391,6 +396,16 @@ export function DealStageModal({
                 >
                   Chat
                 </Button>
+                {isFunded && (
+                  <Button 
+                    variant={activeTab === 'shipment' ? 'secondary' : 'ghost'} 
+                    size="sm" 
+                    onClick={() => setActiveTab('shipment')}
+                    className="text-xs gap-2"
+                  >
+                    <Truck className="w-3 h-3" /> Shipment
+                  </Button>
+                )}
                 {userRole !== 'buyer' && (
                   <Button 
                     variant={activeTab === 'stage' ? 'secondary' : 'ghost'} 
@@ -422,6 +437,15 @@ export function DealStageModal({
               userRole={userRole}
               deal={deal}
             />
+          ) : activeTab === 'shipment' ? (
+            <div className="p-4 md:p-6 h-full overflow-y-auto bg-black/20">
+              <ShipmentTracker 
+                requestId={userRequest?.id}
+                dealId={deal.id}
+                userRole={userRole}
+                userRequest={userRequest}
+              />
+            </div>
           ) : (
             <div className="space-y-6 p-6">
               {userRequest && (

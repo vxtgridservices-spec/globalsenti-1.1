@@ -12,7 +12,10 @@ import {
   MessageSquare, 
   Clock,
   Lock,
-  ChevronRight
+  ChevronRight,
+  Activity,
+  CheckCircle,
+  AlertTriangle
 } from "lucide-react";
 import { motion } from "motion/react";
 import { Navbar } from "@/src/components/layout/Navbar";
@@ -21,6 +24,8 @@ import { Footer } from "@/src/components/layout/Footer";
 export function Dashboard() {
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [requests, setRequests] = useState<any[]>([]);
+  const [activities, setActivities] = useState<any[]>([]);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -44,16 +49,98 @@ export function Dashboard() {
       }
 
       setProfile(profile);
+
+      // Fetch initial requests
+      const reqs = await fetchRequests(user.id);
+      if (reqs && reqs.length > 0) {
+        await fetchRecentActivity(reqs.map((r: any) => r.id));
+      }
       setLoading(false);
 
-      // If user is admin, redirect to admin dashboard (placeholder logic)
       if (profile.role === 'admin') {
-        console.log("Admin detected, redirecting to admin dashboard...");
         navigate("/admin");
       }
     };
+
     checkUser();
   }, [navigate]);
+
+  // Handle Realtime for requests
+  useEffect(() => {
+    if (!profile?.id) return;
+
+    const channelName = `dashboard-requests-${profile.id}`;
+    supabase.removeChannel(supabase.channel(channelName));
+
+    const channel = supabase
+      .channel(channelName)
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'requests' 
+      }, async () => {
+        const reqs = await fetchRequests(profile.id);
+        if (reqs && reqs.length > 0) {
+           fetchRecentActivity(reqs.map((r: any) => r.id));
+        }
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [profile?.id]);
+
+  // Realtime for activity (messages)
+  useEffect(() => {
+    if (!profile?.id || requests.length === 0) return;
+
+    const channelName = `dashboard-activity-${profile.id}`;
+    supabase.removeChannel(supabase.channel(channelName));
+
+    const channel = supabase
+      .channel(channelName)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'messages'
+      }, () => {
+        fetchRecentActivity(requests.map(r => r.id));
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [profile?.id, requests.length]);
+
+  const fetchRequests = async (userId: string) => {
+    const { data: reqs } = await supabase
+      .from("requests")
+      .select("*")
+      .or(`buyer_id.eq.${userId},broker_id.eq.${userId},metadata->>buyer_id.eq.${userId}`);
+    
+    setRequests(reqs || []);
+    return reqs || [];
+  };
+
+  const fetchRecentActivity = async (requestIds: string[]) => {
+    const { data: msgs } = await supabase
+      .from("messages")
+      .select("*")
+      .in("request_id", requestIds)
+      .or('body.ilike.%[PROTOCOL UPDATE]%,body.ilike.%[System]%')
+      .order('created_at', { ascending: false })
+      .limit(8);
+    
+    if (msgs) {
+      setActivities(msgs.map(m => ({
+        title: m.body.replace('[PROTOCOL UPDATE] ', '').replace('[SYSTEM] ', '').replace('[System] ', ''),
+        time: new Date(m.created_at).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+        type: m.body.includes('PROTOCOL') ? 'protocol' : 'logistics'
+      })));
+    }
+  };
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -66,25 +153,36 @@ export function Dashboard() {
     </div>
   );
 
+  // Derive stats from real data - Active contracts are those funded or in shipment
+  const activeContracts = requests.filter(r => 
+    r.status !== 'failed' && 
+    ['escrow', 'shipment', 'contract_issued'].includes(r.stage)
+  );
+  
+  const shipCount = requests.filter(r => 
+    r.status !== 'failed' &&
+    r.metadata?.shipment && 
+    r.metadata.shipment.status !== 'delivered'
+  ).length;
+
   const stats = [
-    { title: "Active Contracts", value: "12", icon: FileText, color: "text-blue-400" },
-    { title: "Pending Shipments", value: "4", icon: Package, color: "text-gold" },
-    { title: "Security Alerts", value: "0", icon: Shield, color: "text-green-400" },
-    { title: "Notifications", value: "3", icon: Bell, color: "text-gold" },
+    { title: "Active Contracts", value: activeContracts.length.toString(), icon: FileText, color: "text-blue-400" },
+    { title: "Pending Shipments", value: shipCount.toString(), icon: Package, color: "text-gold" },
+    { title: "Escrow Protocol", value: requests.filter(r => r.stage === 'escrow').length.toString(), icon: Shield, color: "text-green-400" },
+    { title: "Notifications", value: activities.length.toString(), icon: Bell, color: "text-gold" },
   ];
 
-  const operations = [
-    { id: 1, name: "Operation Sentinel 1", type: "Logistics • Maritime Security", location: "Gulf of Aden", status: "IN PROGRESS", time: "15m ago" },
-    { id: 2, name: "Operation Sentinel 2", type: "Logistics • Maritime Security", location: "Gulf of Aden", status: "IN PROGRESS", time: "15m ago" },
-    { id: 3, name: "Operation Sentinel 3", type: "Logistics • Maritime Security", location: "Gulf of Aden", status: "IN PROGRESS", time: "15m ago" },
-  ];
-
-  const activities = [
-    { title: "Shipment GS-9921 Arrived", time: "2 hours ago", status: "COMPLETED", statusColor: "text-green-500" },
-    { title: "New Compliance Document Uploaded", time: "5 hours ago", status: "ACTION REQUIRED", statusColor: "text-gold" },
-    { title: "Contract Renewal: Sector 7", time: "1 day ago", status: "PENDING", statusColor: "text-blue-500" },
-    { title: "Security Briefing: West Africa", time: "2 days ago", status: "READ", statusColor: "text-gray-500" },
-  ];
+  const operations = requests
+    .filter(r => r.status !== 'failed')
+    .map(r => ({
+      id: r.id,
+      name: r.metadata?.title || `Protocol ${r.id.slice(0, 8)}`,
+      commodity: r.metadata?.commodity || "General Cargo",
+      stage: r.stage ? r.stage.replace('_', ' ').toUpperCase() : "INITIATED",
+      shipment: r.metadata?.shipment,
+      time: r.updated_at ? new Date(r.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Recently"
+    }))
+    .slice(0, 6);
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -130,7 +228,7 @@ export function Dashboard() {
                   <p className="text-muted-foreground text-sm">Real-time status of your global security and logistics projects.</p>
                 </div>
                 <div className="space-y-4">
-                  {operations.map((op) => (
+                  {operations.length > 0 ? operations.map((op) => (
                     <Card key={op.id} className="bg-secondary/20 border-white/5 hover:border-white/10 transition-colors">
                       <CardContent className="p-4 flex items-center gap-4">
                         <div className="w-12 h-12 rounded bg-gold/10 flex items-center justify-center shrink-0">
@@ -139,20 +237,31 @@ export function Dashboard() {
                         <div className="flex-grow">
                           <div className="flex justify-between items-start">
                             <h3 className="text-white font-bold">{op.name}</h3>
-                            <span className="text-[10px] font-bold text-green-500 bg-green-500/10 px-2 py-0.5 rounded">
-                              {op.status}
-                            </span>
+                            <div className="flex flex-col items-end">
+                              <span className="text-[10px] font-bold text-blue-400 bg-blue-400/10 px-2 py-0.5 rounded mb-1">
+                                PROTOCOL: {op.stage}
+                              </span>
+                              {op.shipment && (
+                                <span className={`text-[10px] font-bold ${op.shipment.status === 'delivered' ? 'text-green-500 bg-green-500/10' : 'text-gold bg-gold/10'} px-2 py-0.5 rounded`}>
+                                  SHIPMENT: {op.shipment.status?.replace('_', ' ').toUpperCase()}
+                                </span>
+                              )}
+                            </div>
                           </div>
-                          <p className="text-xs text-muted-foreground">{op.type}</p>
+                          <p className="text-xs text-muted-foreground">{op.commodity} • Intelligence-Led Commerce</p>
                           <div className="flex items-center gap-2 mt-1">
-                            <span className="text-[10px] text-gray-500">• {op.location}</span>
+                            <span className="text-[10px] text-gray-500">• {op.shipment?.location || "Protocol Active"}</span>
                             <span className="text-[10px] text-gray-500">Updated {op.time}</span>
                           </div>
                         </div>
                       </CardContent>
                     </Card>
-                  ))}
-                  <Link to="/services" className="inline-flex items-center text-gold text-sm font-bold hover:underline mt-2">
+                  )) : (
+                    <Card className="bg-secondary/10 border-dashed border-white/5 p-12 text-center">
+                       <p className="text-gray-500 text-sm font-serif italic">No managed operations detected for this profile.</p>
+                    </Card>
+                  )}
+                  <Link to="/deal-room" className="inline-flex items-center text-gold text-sm font-bold hover:underline mt-2">
                     View All Operations <ArrowUpRight className="ml-1 w-4 h-4" />
                   </Link>
                 </div>
@@ -203,26 +312,32 @@ export function Dashboard() {
                 </Card>
               </section>
 
-              <section>
+               <section>
                 <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
-                  <Clock className="w-5 h-5 text-gold" /> Recent Activity
+                  <Activity className="w-5 h-5 text-gold" /> Protocol Activity Feed
                 </h2>
                 <div className="space-y-6">
-                  {activities.map((activity, i) => (
+                  {activities.length > 0 ? activities.map((activity, i) => (
                     <div key={i} className="flex gap-4 relative">
                       {i !== activities.length - 1 && (
                         <div className="absolute left-[7px] top-4 bottom-[-24px] w-[2px] bg-white/5" />
                       )}
-                      <div className="w-4 h-4 rounded-full bg-gold shrink-0 mt-1" />
+                      <div className={`w-4 h-4 rounded-full ${activity.type === 'protocol' ? 'bg-blue-500' : 'bg-gold'} shrink-0 mt-1 shadow-[0_0_8px_rgba(212,175,55,0.3)]`} />
                       <div>
-                        <h4 className="text-sm text-white font-medium">{activity.title}</h4>
-                        <p className="text-[10px] text-muted-foreground mb-1">{activity.time}</p>
-                        <span className={`text-[10px] font-bold uppercase tracking-wider ${activity.statusColor}`}>
-                          {activity.status}
-                        </span>
+                        <h4 className="text-sm text-white font-medium leading-tight">{activity.title}</h4>
+                        <div className="flex items-center gap-2 mt-1">
+                          <p className="text-[9px] text-gray-500 uppercase tracking-widest">{activity.time}</p>
+                          <span className={`text-[8px] font-black uppercase px-1.5 py-0.5 rounded ${activity.type === 'protocol' ? 'bg-blue-500/10 text-blue-400' : 'bg-gold/10 text-gold'}`}>
+                            {activity.type}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  ))}
+                  )) : (
+                    <div className="text-center py-6">
+                       <p className="text-[10px] text-gray-600 uppercase font-black tracking-widest">Awaiting Live Protocol Updates...</p>
+                    </div>
+                  )}
                 </div>
               </section>
 
