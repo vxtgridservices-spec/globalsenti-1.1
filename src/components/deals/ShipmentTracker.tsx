@@ -335,7 +335,8 @@ export function ShipmentTracker({ requestId, dealId, userRole, userRequest, isAd
                 <Input 
                   className="bg-black/50 border-white/10 rounded-xl h-10 text-xs focus:ring-gold/20"
                   placeholder="e.g. Port of Rotterdam"
-                  defaultValue={shipment?.location || ""}
+                  value={shipment?.location || ""}
+                  onChange={(e) => setShipment({ ...shipment, location: e.target.value })}
                   onBlur={(e) => handleUpdate({ location: e.target.value })}
                 />
               </div>
@@ -345,7 +346,8 @@ export function ShipmentTracker({ requestId, dealId, userRole, userRequest, isAd
                 <Input 
                   className="bg-black/50 border-white/10 rounded-xl h-10 text-xs focus:ring-gold/20"
                   placeholder="AWB / BOL Number"
-                  defaultValue={shipment?.reference || ""}
+                  value={shipment?.reference || ""}
+                  onChange={(e) => setShipment({ ...shipment, reference: e.target.value })}
                   onBlur={(e) => handleUpdate({ reference: e.target.value })}
                 />
               </div>
@@ -355,7 +357,8 @@ export function ShipmentTracker({ requestId, dealId, userRole, userRequest, isAd
                 <Input 
                   className="bg-black/50 border-white/10 rounded-xl h-10 text-xs focus:ring-gold/20"
                   placeholder="e.g. SGS Passed"
-                  defaultValue={shipment?.inspection_status || ""}
+                  value={shipment?.inspection_status || ""}
+                  onChange={(e) => setShipment({ ...shipment, inspection_status: e.target.value })}
                   onBlur={(e) => handleUpdate({ inspection_status: e.target.value })}
                 />
               </div>
@@ -365,7 +368,8 @@ export function ShipmentTracker({ requestId, dealId, userRole, userRequest, isAd
                 <Input 
                   className="bg-black/50 border-white/10 rounded-xl h-10 text-xs focus:ring-gold/20"
                   placeholder="e.g. Port Clearance"
-                  defaultValue={shipment?.next_milestone || ""}
+                  value={shipment?.next_milestone || ""}
+                  onChange={(e) => setShipment({ ...shipment, next_milestone: e.target.value })}
                   onBlur={(e) => handleUpdate({ next_milestone: e.target.value })}
                 />
               </div>
@@ -375,7 +379,7 @@ export function ShipmentTracker({ requestId, dealId, userRole, userRequest, isAd
                 <Input 
                   type="date"
                   className="bg-black/50 border-white/10 rounded-xl h-10 text-xs focus:ring-gold/20"
-                  defaultValue={shipment?.expected_date ? new Date(shipment.expected_date).toISOString().split('T')[0] : ""}
+                  value={shipment?.expected_date ? new Date(shipment.expected_date).toISOString().split('T')[0] : ""}
                   onChange={(e) => handleUpdate({ expected_date: e.target.value })}
                 />
               </div>

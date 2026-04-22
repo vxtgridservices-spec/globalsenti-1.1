@@ -273,10 +273,10 @@ export function Dashboard() {
                 </h2>
                 <div className="grid grid-cols-2 gap-4">
                   {[
-                    { name: "New Request", path: "/contact" },
+                    { name: "Investment Room", path: "/investments" },
                     { name: "Document Vault", path: "/vault" },
-                    { name: "Contact Agent", path: "/contact" },
-                    { name: "Billing", path: "#" }
+                    { name: "New Request", path: "/contact" },
+                    { name: "Contact Agent", path: "/contact" }
                   ].map((action) => (
                     <Button 
                       key={action.name} 

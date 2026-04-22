@@ -30,6 +30,10 @@ import { Vault } from "./pages/Vault";
 import { Intelligence } from "./pages/Intelligence";
 import { Partnerships } from "./pages/Partnerships";
 import { Contact } from "./pages/Contact";
+import { InvestmentMarketplace } from "./pages/investments/InvestmentMarketplace";
+import { InvestmentPortfolio } from "./pages/investments/InvestmentPortfolio";
+import { LedgerVerification } from "./pages/investments/LedgerVerification";
+import { AdminInvestments } from "./pages/admin/AdminInvestments";
 import { supabase } from "./lib/supabase";
 
 function ScrollToTop() {
@@ -119,6 +123,10 @@ export default function App() {
         <Route path="/verify-broker" element={<VerifyBroker />} />
         <Route path="/deal/:id" element={<DealManifest />} />
         <Route path="/vault" element={<Vault />} />
+        <Route path="/investments" element={<InvestmentMarketplace />} />
+        <Route path="/investments/portfolio" element={<InvestmentPortfolio />} />
+        <Route path="/investments/ledger/:id" element={<LedgerVerification />} />
+        <Route path="/admin/investments" element={<AdminInvestments />} />
       </Routes>
     </Router>
   );

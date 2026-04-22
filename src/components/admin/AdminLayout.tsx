@@ -10,7 +10,8 @@ import {
   Shield,
   Menu,
   X,
-  Loader2
+  Loader2,
+  TrendingUp
 } from "lucide-react";
 import { Button } from "@/src/components/ui/button";
 import { cn } from "@/src/lib/utils";
@@ -61,6 +62,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
     { label: "Verifications", icon: Shield, path: "/admin/verifications" },
     { label: "Users", icon: Users, path: "/admin/users" },
     { label: "Documents", icon: FileText, path: "/admin/documents" },
+    { label: "Investments", icon: TrendingUp, path: "/admin/investments" },
   ];
 
   const handleLogout = async () => {

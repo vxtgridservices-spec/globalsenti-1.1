@@ -45,7 +45,7 @@ export function VerifyBroker() {
       }
 
       if (profile?.full_name) {
-        setFormData(prev => ({ ...prev, fullName: profile.full_name }));
+        setFormData(prev => ({ ...prev, fullName: profile.full_name || "" }));
       }
     };
     getSession();
