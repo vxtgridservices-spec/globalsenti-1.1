@@ -141,7 +141,7 @@ export function InvestmentMarketplace() {
     >
       <div className="container mx-auto px-4 py-8">
         {/* Market Overview Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-12">
           {[
             { label: "Assets Under Management", value: "$42.5M", icon: Wallet, color: "text-blue-400" },
             { label: "Avg. Historical ROI", value: "15.8%", icon: TrendingUp, color: "text-green-400" },
@@ -153,36 +153,35 @@ export function InvestmentMarketplace() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.1 }}
+              className="flex"
             >
-              <Card className="bg-secondary/20 border-white/5">
-                <CardContent className="p-6">
+              <Card className="bg-secondary/20 border-white/5 h-full w-full">
+                <CardContent className="p-6 flex flex-col h-full">
                   <div className="flex justify-between items-start mb-4">
                     <p className="text-xs text-muted-foreground uppercase tracking-wider font-bold">{stat.label}</p>
                     <stat.icon className={cn("w-4 h-4", stat.color)} />
                   </div>
-                  <p className="text-3xl font-serif text-white">{stat.value}</p>
+                  <p className="text-3xl font-serif text-white mt-auto">{stat.value}</p>
                 </CardContent>
               </Card>
             </motion.div>
           ))}
         </div>
 
-        <div className="flex justify-between items-center mb-8">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8">
           <div>
-            <h2 className="text-3xl font-serif text-white mb-2">Investment Marketplace</h2>
-            <p className="text-muted-foreground text-sm max-w-2xl">
+            <h2 className="text-2xl md:text-3xl font-serif text-white mb-2">Investment Marketplace</h2>
+            <p className="text-muted-foreground text-xs md:text-sm max-w-2xl leading-relaxed">
               Diversify your portfolio with direct access to physical commodity arbitrage, yield funds, and infrastructure-backed investments managed by Global Sentinel Group.
             </p>
           </div>
-          <div className="flex gap-4">
-            <Button 
-                variant="outline" 
-                className="border-white/10 text-white hover:bg-white/5 font-bold"
-                onClick={() => navigate("/investments/portfolio")}
-            >
-              <PieChart className="w-4 h-4 mr-2" /> My Portfolio
-            </Button>
-          </div>
+          <Button 
+              variant="outline" 
+              className="border-white/10 text-white hover:bg-white/5 font-bold w-full md:w-auto h-11"
+              onClick={() => navigate("/investments/portfolio")}
+          >
+            <PieChart className="w-4 h-4 mr-2" /> My Portfolio
+          </Button>
         </div>
 
         {loading ? (
@@ -277,12 +276,12 @@ export function InvestmentMarketplace() {
         )}
         
         {/* Marketplace Disclaimer */}
-        <div className="mt-16 p-8 border border-white/5 bg-secondary/10 rounded-2xl">
-          <div className="flex items-start gap-4">
-            <Info className="w-5 h-5 text-gold shrink-0 mt-1" />
+        <div className="mt-16 p-6 md:p-8 border border-white/5 bg-secondary/10 rounded-2xl">
+          <div className="flex flex-col md:flex-row items-start gap-3 md:gap-4">
+            <Info className="w-5 h-5 text-gold shrink-0 mt-0.5 md:mt-1" />
             <div>
-              <h4 className="text-white font-bold mb-2">Qualified Investor Disclosure</h4>
-              <p className="text-sm text-gray-400 leading-relaxed">
+              <h4 className="text-white font-bold mb-2 text-sm md:text-base">Qualified Investor Disclosure</h4>
+              <p className="text-[12px] md:text-sm text-gray-400 leading-relaxed">
                 Managed commodity investments involve risks, including the loss of principal. Performance targets are projections based on historical data and strategic analysis, and are not guaranteed. These products are available exclusively to qualified and accredited investors through Global Sentinel Group's secure administrative framework. Strategy notes represent the intended methodology and may be adjusted based on market volatility and physical commodity liquidity.
               </p>
             </div>
@@ -295,10 +294,10 @@ export function InvestmentMarketplace() {
                 <motion.div 
                     initial={{ opacity: 0, scale: 0.95, y: 20 }} 
                     animate={{ opacity: 1, scale: 1, y: 0 }} 
-                    className="bg-secondary p-8 rounded-3xl border border-white/10 w-full max-w-lg shadow-2xl relative overflow-hidden"
+                    className="bg-secondary p-6 md:p-8 rounded-3xl border border-white/10 w-full max-w-lg shadow-2xl relative overflow-hidden"
                 >
                     <div className="absolute top-0 left-0 w-full h-1 bg-gold" />
-                    <h3 className="text-2xl font-serif text-white mb-2">Purchase Settlement</h3>
+                    <h3 className="text-xl md:text-2xl font-serif text-white mb-2">Purchase Settlement</h3>
                     <p className="text-xs text-gray-500 mb-8 font-mono uppercase tracking-widest">{selectedProduct.name}</p>
                     
                     <div className="space-y-6 mb-8">

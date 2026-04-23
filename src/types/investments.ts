@@ -126,3 +126,10 @@ export interface InvestorTransaction {
   metadata?: any;
   created_at: string;
 }
+
+export interface PriceHistory {
+    id: string;
+    product_id: string;
+    price: number;
+    timestamp: string;
+}

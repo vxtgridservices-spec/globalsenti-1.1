@@ -31,6 +31,7 @@ import { motion } from "motion/react";
 import { supabase } from "@/src/lib/supabase";
 import { InvestmentProduct, PerformanceUpdate, RiskLevel, ProductStatus, ROIType, DistributionFrequency, InvestmentSubscription, FundingDetails, FundingSubmission, RedemptionRequest } from "@/src/types/investments";
 import { cn } from "@/src/lib/utils";
+import { AdminChartControls } from "@/src/components/admin/AdminChartControls";
 import { 
   Select, 
   SelectContent, 
@@ -87,7 +88,7 @@ CREATE TABLE IF NOT EXISTS public.investment_products (
 
 CREATE TABLE IF NOT EXISTS public.investment_subscriptions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL REFERENCES auth.users(id),
+    user_id UUID NOT NULL REFERENCES public.profiles(id),
     product_id UUID NOT NULL REFERENCES public.investment_products(id),
     units INTEGER NOT NULL,
     unit_price_at_purchase NUMERIC NOT NULL,
@@ -102,7 +103,7 @@ CREATE TABLE IF NOT EXISTS public.investment_subscriptions (
 
 CREATE TABLE IF NOT EXISTS public.investor_positions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL REFERENCES auth.users(id),
+    user_id UUID NOT NULL REFERENCES public.profiles(id),
     product_id UUID NOT NULL REFERENCES public.investment_products(id),
     units INTEGER NOT NULL,
     total_invested NUMERIC NOT NULL,
@@ -118,10 +119,73 @@ CREATE TABLE IF NOT EXISTS public.investment_performance (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- CREATE PROFILES TABLE FOR PUBLIC USER INFO
+CREATE TABLE IF NOT EXISTS public.profiles (
+    id UUID PRIMARY KEY REFERENCES auth.users(id),
+    email TEXT,
+    full_name TEXT,
+    role TEXT DEFAULT 'client',
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- FUNCTION & TRIGGER TO AUTO-CREATE PROFILE ON SIGNUP
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO public.profiles (id, email, full_name)
+  VALUES (new.id, new.email, new.raw_user_meta_data->>'full_name');
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
+
+-- SYNC EXISTING USERS TO PROFILES
+INSERT INTO public.profiles (id, email)
+SELECT id, email FROM auth.users
+ON CONFLICT (id) DO NOTHING;
+
+-- ENSURE FOREIGN KEYS FOR EXISTING TABLES
+DO $$ 
+BEGIN
+    -- funding_submissions
+    IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE constraint_name = 'funding_submissions_user_id_fkey_profiles') THEN
+        ALTER TABLE public.funding_submissions DROP CONSTRAINT IF EXISTS funding_submissions_user_id_fkey;
+        ALTER TABLE public.funding_submissions ADD CONSTRAINT funding_submissions_user_id_fkey_profiles FOREIGN KEY (user_id) REFERENCES public.profiles(id);
+    END IF;
+
+    -- investor_transactions
+    IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE constraint_name = 'investor_transactions_user_id_fkey_profiles') THEN
+        ALTER TABLE public.investor_transactions DROP CONSTRAINT IF EXISTS investor_transactions_user_id_fkey;
+        ALTER TABLE public.investor_transactions ADD CONSTRAINT investor_transactions_user_id_fkey_profiles FOREIGN KEY (user_id) REFERENCES public.profiles(id);
+    END IF;
+
+    -- redemption_requests
+    IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE constraint_name = 'redemption_requests_user_id_fkey_profiles') THEN
+        ALTER TABLE public.redemption_requests DROP CONSTRAINT IF EXISTS redemption_requests_user_id_fkey;
+        ALTER TABLE public.redemption_requests ADD CONSTRAINT redemption_requests_user_id_fkey_profiles FOREIGN KEY (user_id) REFERENCES public.profiles(id);
+    END IF;
+    
+    -- investment_subscriptions
+    IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE constraint_name = 'investment_subscriptions_user_id_fkey_profiles') THEN
+        ALTER TABLE public.investment_subscriptions DROP CONSTRAINT IF EXISTS investment_subscriptions_user_id_fkey;
+        ALTER TABLE public.investment_subscriptions ADD CONSTRAINT investment_subscriptions_user_id_fkey_profiles FOREIGN KEY (user_id) REFERENCES public.profiles(id);
+    END IF;
+
+    -- investor_positions
+    IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE constraint_name = 'investor_positions_user_id_fkey_profiles') THEN
+        ALTER TABLE public.investor_positions DROP CONSTRAINT IF EXISTS investor_positions_user_id_fkey;
+        ALTER TABLE public.investor_positions ADD CONSTRAINT investor_positions_user_id_fkey_profiles FOREIGN KEY (user_id) REFERENCES public.profiles(id);
+    END IF;
+END $$;
+
 CREATE TABLE IF NOT EXISTS public.funding_submissions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     subscription_id UUID NOT NULL REFERENCES public.investment_subscriptions(id),
-    user_id UUID NOT NULL REFERENCES auth.users(id),
+    user_id UUID NOT NULL REFERENCES public.profiles(id),
     amount NUMERIC NOT NULL,
     payment_proof_hash TEXT NOT NULL,
     status TEXT DEFAULT 'Pending',
@@ -132,7 +196,7 @@ CREATE TABLE IF NOT EXISTS public.funding_submissions (
 
 CREATE TABLE IF NOT EXISTS public.investor_transactions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL REFERENCES auth.users(id),
+    user_id UUID NOT NULL REFERENCES public.profiles(id),
     subscription_id UUID REFERENCES public.investment_subscriptions(id),
     position_id UUID REFERENCES public.investor_positions(id),
     type TEXT NOT NULL,
@@ -143,6 +207,20 @@ CREATE TABLE IF NOT EXISTS public.investor_transactions (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS public.redemption_requests (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    position_id UUID NOT NULL REFERENCES public.investor_positions(id),
+    user_id UUID NOT NULL REFERENCES public.profiles(id),
+    units INTEGER NOT NULL,
+    amount NUMERIC NOT NULL,
+    redemption_type TEXT NOT NULL,
+    payment_destination JSONB,
+    status TEXT DEFAULT 'Pending Review',
+    admin_notes TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    processed_at TIMESTAMPTZ
+);
+
 /* REPAIR EXISTING */
 ALTER TABLE investment_products ADD COLUMN IF NOT EXISTS total_units INTEGER DEFAULT 100;
 ALTER TABLE investment_products ADD COLUMN IF NOT EXISTS roi_type TEXT DEFAULT 'Fixed';
@@ -151,6 +229,23 @@ ALTER TABLE investment_products ADD COLUMN IF NOT EXISTS start_date DATE DEFAULT
 ALTER TABLE investment_products ADD COLUMN IF NOT EXISTS maturity_date DATE;
 ALTER TABLE investment_products ADD COLUMN IF NOT EXISTS strategy_notes TEXT;
 ALTER TABLE investment_products ADD COLUMN IF NOT EXISTS max_allocation NUMERIC DEFAULT 500000;
+
+CREATE TABLE IF NOT EXISTS public.price_history (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    product_id UUID NOT NULL REFERENCES public.investment_products(id),
+    price NUMERIC NOT NULL,
+    timestamp TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS public.market_checkpoints (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    product_id UUID REFERENCES public.investment_products(id),
+    target_timestamp TIMESTAMPTZ NOT NULL,
+    target_value NUMERIC NOT NULL,
+    percentage_change NUMERIC DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 ALTER TABLE investment_products ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
 ALTER TABLE investment_products ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
 
@@ -164,6 +259,15 @@ ALTER TABLE public.investor_positions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.investment_performance ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.funding_submissions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.investor_transactions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.redemption_requests ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.price_history ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.market_checkpoints ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Public profiles" ON public.profiles;
+CREATE POLICY "Public profiles" ON public.profiles FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Users update own profile" ON public.profiles;
+CREATE POLICY "Users update own profile" ON public.profiles FOR UPDATE USING (auth.uid() = id);
 
 DROP POLICY IF EXISTS "Users view own funding" ON public.funding_submissions;
 DROP POLICY IF EXISTS "Users create funding" ON public.funding_submissions;
@@ -176,6 +280,13 @@ DROP POLICY IF EXISTS "Users view own transactions" ON public.investor_transacti
 DROP POLICY IF EXISTS "Admin manage transactions" ON public.investor_transactions;
 CREATE POLICY "Users view own transactions" ON public.investor_transactions FOR SELECT USING (auth.uid() = user_id);
 CREATE POLICY "Admin manage transactions" ON public.investor_transactions FOR ALL USING (true);
+
+DROP POLICY IF EXISTS "Users view own redemptions" ON public.redemption_requests;
+DROP POLICY IF EXISTS "Users create redemptions" ON public.redemption_requests;
+DROP POLICY IF EXISTS "Admin manage redemptions" ON public.redemption_requests;
+CREATE POLICY "Users view own redemptions" ON public.redemption_requests FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users create redemptions" ON public.redemption_requests FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Admin manage redemptions" ON public.redemption_requests FOR ALL USING (true);
 
 DROP POLICY IF EXISTS "Public View" ON public.investment_products;
 DROP POLICY IF EXISTS "Admin Manage" ON public.investment_products;
@@ -198,7 +309,17 @@ CREATE POLICY "Admin manage positions" ON public.investor_positions FOR ALL USIN
 DROP POLICY IF EXISTS "Public View Perf" ON public.investment_performance;
 DROP POLICY IF EXISTS "Admin Manage Perf" ON public.investment_performance;
 CREATE POLICY "Public View Perf" ON public.investment_performance FOR SELECT USING (true);
-CREATE POLICY "Admin Manage Perf" ON public.investment_performance FOR ALL USING (true);`;
+CREATE POLICY "Admin Manage Perf" ON public.investment_performance FOR ALL USING (true);
+
+DROP POLICY IF EXISTS "Public View Price" ON public.price_history;
+DROP POLICY IF EXISTS "Admin Manage Price" ON public.price_history;
+CREATE POLICY "Public View Price" ON public.price_history FOR SELECT USING (true);
+CREATE POLICY "Admin Manage Price" ON public.price_history FOR ALL USING (true);
+
+DROP POLICY IF EXISTS "Public View Checkpoints" ON public.market_checkpoints;
+DROP POLICY IF EXISTS "Admin Manage Checkpoints" ON public.market_checkpoints;
+CREATE POLICY "Public View Checkpoints" ON public.market_checkpoints FOR SELECT USING (true);
+CREATE POLICY "Admin Manage Checkpoints" ON public.market_checkpoints FOR ALL USING (true);`;
 
 export function AdminInvestments() {
   const [products, setProducts] = React.useState<InvestmentProduct[]>([]);
@@ -310,15 +431,38 @@ export function AdminInvestments() {
 
   const fetchRedemptions = async () => {
     try {
+        // Attempt a joined fetch first
         const { data, error } = await supabase
             .from('redemption_requests')
             .select(`
                 *, 
-                position:investor_positions(*, product:investment_products(*))
+                position:investor_positions(*, product:investment_products(*)),
+                profile:profiles(email, full_name)
             `)
             .order('created_at', { ascending: false });
         
-        if (error && error.code !== '42P01') throw error;
+        if (error) {
+            // Fallback: Relationship missing (schema cache out of sync)
+            if (error.code === 'PGRST200') {
+               console.warn("Foreign key relationship missing between redemption_requests and profiles. Performing manual join.");
+               const [redRes, profRes] = await Promise.all([
+                   supabase.from('redemption_requests').select('*, position:investor_positions(*, product:investment_products(*))').order('created_at', { ascending: false }),
+                   supabase.from('profiles').select('id, email, full_name')
+               ]);
+
+               if (redRes.error && redRes.error.code !== '42P01') throw redRes.error;
+               
+               const profilesMap = (profRes.data || []).reduce((acc, p) => ({ ...acc, [p.id]: p }), {});
+               const joinedData = (redRes.data || []).map(r => ({
+                   ...r,
+                   profile: profilesMap[r.user_id] || null
+               }));
+               
+               setRedemptions(joinedData);
+               return;
+            }
+            if (error.code !== '42P01') throw error;
+        }
         setRedemptions(data || []);
     } catch (err) {
         console.error("Redemption fetch error:", err);
@@ -496,57 +640,122 @@ export function AdminInvestments() {
       setProducts(updated);
   };
 
-  const handleCreateProduct = async () => {
+  const handleDeleteProduct = async (id: string, name: string) => {
+    if (!confirm(`Are you sure you want to delete "${name}"? This action cannot be undone.`)) return;
+    
+    try {
+      const { error } = await supabase.from('investment_products').delete().eq('id', id);
+      if (error) {
+          // If product is in use, Supabase will throw a foreign key error
+          if (error.code === '23503') {
+              alert("Cannot delete product: It has active subscriptions or positions. Archive it instead.");
+              return;
+          }
+          throw error;
+      }
+      
+      alert("Product deleted successfully.");
+      fetchProducts();
+    } catch (err) {
+      console.error("Delete failed:", err);
+      // Fallback for local
+      const localData = localStorage.getItem('gs_simulated_products');
+      if (localData) {
+          const currentProds = JSON.parse(localData);
+          const updated = currentProds.filter((p: any) => p.id !== id);
+          localStorage.setItem('gs_simulated_products', JSON.stringify(updated));
+          setProducts(updated);
+          alert("Product removed from local storage.");
+      } else {
+        alert("Delete operation failed.");
+      }
+    }
+  };
+
+  const handleEditProduct = (product: InvestmentProduct) => {
+      setNewProduct({ ...product });
+      setSelectedProduct(product);
+      setIsAddingProduct(true);
+  };
+
+  const handleSaveProduct = async () => {
     try {
       if (!newProduct.name || !newProduct.commodity) {
         alert("Please provide at least a name and commodity.");
         return;
       }
 
-      // Convert status to lowercase for database consistency
       const activeStatus = newProduct.status || 'Active';
       const statusValue = activeStatus.toLowerCase();
+      const isUpdating = !!selectedProduct?.id && !String(selectedProduct.id).startsWith('sim-');
 
-      const productToInsert = {
+      const productPayload = {
         ...newProduct,
-        units_available: newProduct.total_units || 0,
-        status: statusValue, 
-        created_at: new Date().toISOString()
+        units_available: newProduct.units_available ?? newProduct.total_units,
+        status: statusValue,
+        updated_at: new Date().toISOString()
       };
       
-      const { data, error } = await supabase
-        .from('investment_products')
-        .insert([productToInsert])
-        .select();
+      // Clean up for Supabase (remove simulated or extra fields)
+      const { id, product: _unused, ...dbPayload } = productPayload as any;
 
-      if (error) {
-        console.error("Supabase Insertion Failed:", error);
-        throw error;
+      let error;
+      if (isUpdating) {
+        const { error: updateError } = await supabase
+          .from('investment_products')
+          .update(dbPayload)
+          .eq('id', selectedProduct.id);
+        error = updateError;
+      } else {
+        const { error: insertError, data: insertData } = await supabase
+          .from('investment_products')
+          .insert([{ ...dbPayload, created_at: new Date().toISOString() }])
+          .select();
+        
+        error = insertError;
+        
+        // Log initial price history for new products
+        if (!error && insertData && insertData[0]) {
+            await supabase.from('price_history').insert([{
+                product_id: insertData[0].id,
+                price: insertData[0].unit_price,
+                timestamp: new Date().toISOString()
+            }]);
+        }
       }
+
+      if (error) throw error;
       
-      console.log("Product saved successfully:", data);
       setIsAddingProduct(false);
+      setSelectedProduct(null);
       fetchProducts();
-      alert(`SUCCESS: Product ${statusValue === 'active' ? 'published' : 'saved'} successfully to database.`);
+      alert(`SUCCESS: Product ${isUpdating ? 'updated' : 'created'} successfully.`);
     } catch (err: any) {
-      console.error("Critical Failure in handleCreateProduct:", err);
+      console.error("Save failure:", err);
       
+      // Local fallback
       const simulatedProd = { 
         ...newProduct, 
-        id: `sim-${Date.now()}`, 
-        units_available: newProduct.total_units || 0,
-        status: newProduct.status || 'Active', 
-        created_at: new Date().toISOString() 
+        id: selectedProduct?.id || `sim-${Date.now()}`, 
+        units_available: newProduct.units_available ?? newProduct.total_units,
+        status: newProduct.status || 'Active',
       } as InvestmentProduct;
 
-      persistLocally(simulatedProd);
-      setIsAddingProduct(false);
+      const localData = localStorage.getItem('gs_simulated_products');
+      const currentProds = localData ? JSON.parse(localData) : [];
+      let updated;
       
-      if (err.code === '42P01' || err.message?.includes('not found')) {
-        setDbStatus('missing_table');
+      if (selectedProduct?.id) {
+          updated = currentProds.map((p: any) => p.id === selectedProduct.id ? simulatedProd : p);
+      } else {
+          updated = [simulatedProd, ...currentProds];
       }
-
-      alert(`⚠️ PERSISTENCE NOTICE: Your database table 'investment_products' is missing. The product was saved LOCALLY in your browser for now, but will not be visible to clients until you create the table in Supabase.`);
+      
+      localStorage.setItem('gs_simulated_products', JSON.stringify(updated));
+      setProducts(updated);
+      setIsAddingProduct(false);
+      setSelectedProduct(null);
+      alert("Note: Saved to local storage (Database table missing or disconnected).");
     }
   };
 
@@ -642,6 +851,14 @@ export function AdminInvestments() {
        const { error: logError } = await supabase.from('investment_performance').insert([payload]);
        if (logError) throw logError;
 
+       // 1b. Log specifically into price_history for the chart visualization
+       const { error: priceHistoryError } = await supabase.from('price_history').insert([{
+           product_id: selectedProduct.id,
+           price: performanceForm.current_nav,
+           timestamp: new Date().toISOString()
+       }]);
+       if (priceHistoryError) console.error("Failed to log price history:", priceHistoryError);
+
        // 2. Update current unit price in the main product table
        if (performanceForm.current_nav) {
          const { error: prodError } = await supabase
@@ -663,6 +880,37 @@ export function AdminInvestments() {
        alert("Sync failed. Check database connectivity.");
        setIsUpdatingPerformance(false);
     }
+  };
+
+  const handleInitializePriceHistory = async () => {
+      try {
+          const { data: prods, error: fetchError } = await supabase.from('investment_products').select('id, unit_price');
+          if (fetchError) throw fetchError;
+          if (!prods || prods.length === 0) return;
+
+          const { data: existingHistory, error: historyError } = await supabase.from('price_history').select('product_id');
+          if (historyError) throw historyError;
+
+          const existingIds = new Set((existingHistory || []).map(h => h.product_id));
+          const toInsert = prods
+            .filter(p => !existingIds.has(p.id))
+            .map(p => ({
+                product_id: p.id,
+                price: p.unit_price,
+                timestamp: new Date().toISOString()
+            }));
+
+          if (toInsert.length > 0) {
+              const { error: insertError } = await supabase.from('price_history').insert(toInsert);
+              if (insertError) throw insertError;
+              alert(`Success: Seeded ${toInsert.length} data points for visualization.`);
+          } else {
+              alert("Chart data is already initialized.");
+          }
+      } catch (err) {
+          console.error("Initialization failed:", err);
+          alert("Data synchronization failed. Table might be missing.");
+      }
   };
 
   return (
@@ -845,12 +1093,30 @@ export function AdminInvestments() {
             </motion.section>
         )}
 
+        <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-12"
+        >
+            <div className="flex items-center gap-3 mb-6">
+                <div className="w-1.5 h-1.5 bg-gold rounded-full" />
+                <h3 className="text-xl font-serif text-white uppercase tracking-widest">Market Trend Manipulation</h3>
+            </div>
+            <div className="max-w-2xl">
+                <AdminChartControls />
+                <p className="mt-4 text-[10px] text-gray-500 font-mono uppercase leading-relaxed max-w-lg">
+                    Use these controls to inject global or product-specific market volatility. 
+                    Target values are calculated from current AUM and will be reached over the specified timeframe.
+                </p>
+            </div>
+        </motion.div>
+
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-12">
             <div>
-                <h2 className="text-3xl font-serif text-white mb-2">Product Management</h2>
-                <div className="flex items-center gap-4 text-xs text-gray-500 font-medium">
-                    <span className="flex items-center gap-1.5"><Activity className="w-3.5 h-3.5 text-green-500" /> System Active</span>
-                    <span className="flex items-center gap-1.5"><BarChart3 className="w-3.5 h-3.5 text-blue-500" /> Real-time Feeds Synchronized</span>
+                <h2 className="text-2xl md:text-3xl font-serif text-white mb-2">Product Management</h2>
+                <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4 text-[10px] md:text-xs text-gray-500 font-medium">
+                    <span className="flex items-center gap-1.5"><Activity className="w-3 md:w-3.5 h-3 md:h-3.5 text-green-500" /> System Active</span>
+                    <span className="flex items-center gap-1.5"><BarChart3 className="w-3 md:w-3.5 h-3 md:h-3.5 text-blue-500" /> Real-time Feeds Synchronized</span>
                 </div>
             </div>
             <div className="flex gap-4">
@@ -865,9 +1131,37 @@ export function AdminInvestments() {
                  >
                     <Database className="w-4 h-4" /> Sync DB
                  </Button>
+                  <Button 
+                    variant="outline"
+                    className="border-gold/20 text-gold hover:bg-gold/10 font-bold gap-2"
+                    onClick={handleInitializePriceHistory}
+                 >
+                    <RefreshCw className="w-4 h-4" /> Initialize Charts
+                 </Button>
                  <Button 
                     className="bg-gold hover:bg-gold-light text-background font-bold gap-2"
-                    onClick={() => setIsAddingProduct(true)}
+                    onClick={() => {
+                        setSelectedProduct(null);
+                        setNewProduct({
+                            name: "",
+                            commodity: "Gold",
+                            status: 'Draft',
+                            risk_level: 'Low',
+                            roi_type: 'Fixed',
+                            distribution_frequency: 'End of term',
+                            min_investment: 10000,
+                            max_allocation: 500000,
+                            unit_price: 1000,
+                            total_units: 100,
+                            target_roi: 12,
+                            duration_days: 180,
+                            start_date: new Date().toISOString().split('T')[0],
+                            maturity_date: "",
+                            description: "",
+                            strategy_notes: ""
+                        });
+                        setIsAddingProduct(true);
+                    }}
                  >
                     <Plus className="w-4 h-4" /> Create Managed Product
                  </Button>
@@ -893,7 +1187,10 @@ export function AdminInvestments() {
                     <div className="flex flex-col items-center gap-4">
                         <Button 
                             className="bg-gold hover:bg-gold-light text-background font-bold gap-2 px-8"
-                            onClick={() => setIsAddingProduct(true)}
+                            onClick={() => {
+                                setSelectedProduct(null);
+                                setIsAddingProduct(true);
+                            }}
                         >
                             <Plus className="w-4 h-4" /> Create First Product
                         </Button>
@@ -950,13 +1247,25 @@ export function AdminInvestments() {
                                 >
                                     <Activity className="w-4 h-4" /> Update Performance
                                 </Button>
-                                <Button variant="ghost" className="text-gray-500 hover:text-white">
+                                <Button 
+                                    variant="ghost" 
+                                    className="text-gray-500 hover:text-white"
+                                    onClick={() => handleEditProduct(product)}
+                                >
                                     <Edit3 className="w-4 h-4" />
                                 </Button>
-                                <Button variant="ghost" className="text-red-500/50 hover:text-red-500">
+                                <Button 
+                                    variant="ghost" 
+                                    className="text-red-500/50 hover:text-red-500"
+                                    onClick={() => handleDeleteProduct(product.id, product.name)}
+                                >
                                     <Trash2 className="w-4 h-4" />
                                 </Button>
-                                <Button variant="ghost" className="text-gray-500">
+                                <Button 
+                                    variant="ghost" 
+                                    className="text-gray-500"
+                                    onClick={() => handleEditProduct(product)}
+                                >
                                     <ChevronRight className="w-5 h-5" />
                                 </Button>
                             </div>
@@ -1119,8 +1428,29 @@ export function AdminInvestments() {
                                     <div className="w-12 h-12 rounded-xl bg-amber-500/10 flex items-center justify-center shrink-0 text-amber-500 font-black italic">!</div>
                                     <div>
                                         <h4 className="text-white font-bold">{req.position?.product?.name} Redemption</h4>
-                                        <p className="text-xs text-gray-500 italic mb-2">Request Type: <span className="text-amber-500 font-bold uppercase">{req.redemption_type}</span></p>
-                                        <div className="flex items-center gap-2">
+                                        <div className="flex flex-col gap-1 my-1">
+                                            <p className="text-[10px] text-gold font-bold">Requester: {req.profile?.email || req.user_id}</p>
+                                            <p className="text-xs text-gray-500 italic">Request Type: <span className="text-amber-500 font-bold uppercase">{req.redemption_type}</span></p>
+                                        </div>
+                                        <div className="flex flex-col gap-2 mt-3 p-3 bg-black/30 rounded-lg border border-white/5">
+                                            <span className="text-[9px] uppercase tracking-widest text-gray-400 font-bold">Exit Route: {req.payment_destination?.type || 'Standard'}</span>
+                                            {req.payment_destination?.type === 'Bank' ? (
+                                                <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[10px] text-gray-300">
+                                                    <p>Beneficiary: <span className="text-white">{req.payment_destination.beneficiary}</span></p>
+                                                    <p>Bank: <span className="text-white">{req.payment_destination.bankName}</span></p>
+                                                    <p className="col-span-2">IBAN: <span className="text-white font-mono">{req.payment_destination.iban}</span></p>
+                                                    <p className="col-span-2">SWIFT: <span className="text-white font-mono">{req.payment_destination.swift}</span></p>
+                                                </div>
+                                            ) : req.payment_destination?.type === 'Crypto' ? (
+                                                <div className="space-y-1 text-[10px] text-gray-300">
+                                                    <p>Network: <span className="text-white">{req.payment_destination.network}</span></p>
+                                                    <p>Wallet: <span className="text-white font-mono break-all">{req.payment_destination.address}</span></p>
+                                                </div>
+                                            ) : (
+                                                <span className="text-[10px] text-gray-500 font-mono italic">Details: {req.payment_destination?.details}</span>
+                                            )}
+                                        </div>
+                                        <div className="flex items-center gap-2 mt-4">
                                            <span className={cn(
                                                "px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest border",
                                                req.status === 'Completed' ? "bg-green-500/10 text-green-500 border-green-500/20" : 
@@ -1129,7 +1459,6 @@ export function AdminInvestments() {
                                            )}>
                                                {req.status}
                                            </span>
-                                           <span className="text-[10px] text-gray-500 font-mono">To: {req.payment_destination?.details?.slice(0, 20)}...</span>
                                         </div>
                                     </div>
                                 </div>
@@ -1178,6 +1507,11 @@ export function AdminInvestments() {
                                             >
                                                 Mark Completed
                                             </Button>
+                                         ) : req.status === 'Rejected' ? (
+                                            <div className="flex items-center gap-2 text-red-500">
+                                                <Ban className="w-5 h-5" />
+                                                <span className="text-[10px] font-bold uppercase tracking-widest">Rejected</span>
+                                            </div>
                                          ) : (
                                             <div className="flex items-center gap-2 text-green-500">
                                                 <CheckCircle2 className="w-5 h-5" />
@@ -1355,8 +1689,8 @@ export function AdminInvestments() {
                     </div>
 
                     <div className="flex gap-4 pt-4 border-t border-white/5">
-                        <Button className="flex-1 bg-gold hover:bg-gold-light text-background font-bold h-12 gap-2" onClick={handleCreateProduct}>
-                            <Save className="w-4 h-4" /> Finalize & {newProduct.status === 'Active' ? 'Publish' : 'Store'} Product
+                        <Button className="flex-1 bg-gold hover:bg-gold-light text-background font-bold h-12 gap-2" onClick={handleSaveProduct}>
+                            <Save className="w-4 h-4" /> {selectedProduct ? "Update Product" : "Finalize & Publish Product"}
                         </Button>
                         <Button variant="ghost" className="text-gray-500 hover:text-white" onClick={() => setIsAddingProduct(false)}>Discard</Button>
                     </div>
@@ -1406,20 +1740,20 @@ export function AdminInvestments() {
                         </Button>
                     </div>
 
-                    <div className="bg-black/50 p-6 rounded-2xl border border-white/10 mb-8 max-h-[400px] overflow-y-auto relative group">
+                    <div className="bg-black/50 p-6 rounded-2xl border border-white/10 mb-6 max-h-[400px] overflow-y-auto relative">
                         <pre className="text-[10px] text-gold/80 font-mono leading-relaxed whitespace-pre-wrap">
                             {DATABASE_SETUP_SQL}
                         </pre>
                         <Button 
-                            variant="ghost" 
+                            variant="secondary" 
                             size="sm" 
-                            className="absolute top-4 right-4 text-gold hover:text-white bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity"
+                            className="absolute top-4 right-4 bg-gold text-background hover:bg-gold-light font-bold"
                             onClick={() => {
                                 navigator.clipboard.writeText(DATABASE_SETUP_SQL);
                                 alert("Full Purchase Flow SQL copied.");
                             }}
                         >
-                            <Copy className="w-3.5 h-3.5 mr-2" /> Copy Purchase Flow SQL
+                            <Copy className="w-3.5 h-3.5 mr-2" /> Copy SQL Code
                         </Button>
                     </div>
 

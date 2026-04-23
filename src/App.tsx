@@ -51,7 +51,7 @@ function AuthListener() {
   const location = useLocation();
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log("Auth Event:", event);
       
       if (event === 'SIGNED_OUT') {
@@ -61,6 +61,12 @@ function AuthListener() {
 
       if (event === 'TOKEN_REFRESHED') {
         console.log("Token Refreshed Successfully");
+      }
+
+      if (event === 'TOKEN_REFRESH_FAILURE') {
+        console.error("Critical Auth Error: Token refresh failed. Signing out.");
+        await supabase.auth.signOut();
+        navigate('/portal');
       }
 
       // Handle session expiration or invalidity

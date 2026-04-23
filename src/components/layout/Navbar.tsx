@@ -51,10 +51,10 @@ export function Navbar() {
             <Shield className="text-background w-7 h-7" />
           </div>
           <div className="flex flex-col">
-            <span className="text-white font-serif font-bold text-xl leading-none tracking-tight group-hover:text-gold transition-colors">
+            <span className="text-white font-serif font-bold text-base md:text-xl leading-none tracking-tight group-hover:text-gold transition-colors">
               GLOBAL SENTINEL
             </span>
-            <span className="text-gold text-[11px] font-bold tracking-[0.3em] leading-none mt-1.5 opacity-80">
+            <span className="text-gold text-[8px] md:text-[11px] font-bold tracking-[0.3em] leading-none mt-1.5 opacity-80">
               GROUP
             </span>
           </div>

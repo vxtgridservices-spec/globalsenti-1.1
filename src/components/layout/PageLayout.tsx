@@ -15,7 +15,7 @@ export function PageLayout({ children, title, subtitle }: PageLayoutProps) {
       <Navbar />
       
       {/* Page Header */}
-      <section className="pt-40 pb-20 bg-secondary/20 border-b border-white/5">
+      <section className="pt-32 pb-12 md:pt-40 md:pb-20 bg-secondary/20 border-b border-white/5">
         <div className="container mx-auto px-4">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -24,11 +24,11 @@ export function PageLayout({ children, title, subtitle }: PageLayoutProps) {
             className="max-w-3xl"
           >
             {subtitle && (
-              <p className="text-gold font-bold tracking-[0.3em] uppercase text-sm mb-4">
+              <p className="text-gold font-bold tracking-[0.1em] md:tracking-[0.3em] text-[9px] md:text-sm mb-3 md:mb-4 leading-normal md:leading-relaxed">
                 {subtitle}
               </p>
             )}
-            <h1 className="text-5xl md:text-7xl font-bold text-white leading-tight">
+            <h1 className="text-3xl md:text-7xl font-bold text-white leading-tight md:leading-none">
               {title}
             </h1>
           </motion.div>

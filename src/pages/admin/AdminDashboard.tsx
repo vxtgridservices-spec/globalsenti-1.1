@@ -1,7 +1,5 @@
 import * as React from "react";
 import { AdminLayout } from "@/src/components/admin/AdminLayout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui/card";
-import { Button } from "@/src/components/ui/button";
 import { 
   Users, 
   Briefcase, 
@@ -16,6 +14,8 @@ import {
 import { cn } from "@/src/lib/utils";
 import { motion } from "motion/react";
 import { supabase } from "@/src/lib/supabase";
+import { Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui/card";
+import { Button } from "@/src/components/ui/button";
 
 export function AdminDashboard() {
   const [stats, setStats] = React.useState<any[]>([]);

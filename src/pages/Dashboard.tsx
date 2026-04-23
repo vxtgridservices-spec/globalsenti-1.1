@@ -190,28 +190,29 @@ export function Dashboard() {
       
       <main className="flex-grow pt-32 pb-20 px-4">
         <div className="container mx-auto max-w-6xl">
-          <div className="flex justify-between items-end mb-12">
-            <h1 className="text-5xl md:text-7xl font-serif text-white">Client Dashboard</h1>
-            <Button onClick={handleSignOut} variant="outline" className="border-white/10 text-white hover:bg-white/5">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-12">
+            <h1 className="text-4xl md:text-7xl font-serif text-white">Client Dashboard</h1>
+            <Button onClick={handleSignOut} variant="outline" className="border-white/10 text-white hover:bg-white/5 w-full md:w-auto">
               Sign Out
             </Button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
             {stats.map((stat, i) => (
               <motion.div
                 key={stat.title}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.1 }}
+                className="flex"
               >
-                <Card className="bg-secondary/20 border-white/5 hover:border-white/10 transition-colors">
-                  <CardContent className="p-6 flex justify-between items-center">
+                <Card className="bg-secondary/20 border-white/5 hover:border-white/10 transition-colors w-full h-full">
+                  <CardContent className="p-6 flex justify-between items-center h-full w-full">
                     <div>
                       <p className="text-sm text-muted-foreground mb-1">{stat.title}</p>
                       <p className="text-4xl font-serif text-white">{stat.value}</p>
                     </div>
-                    <div className="w-12 h-12 rounded-lg bg-white/5 flex items-center justify-center">
+                    <div className="w-12 h-12 rounded-lg bg-white/5 flex items-center justify-center shrink-0">
                       <stat.icon className={`w-6 h-6 ${stat.color}`} />
                     </div>
                   </CardContent>
