@@ -88,7 +88,7 @@ export interface FundingSubmission {
   admin_notes?: string;
   created_at: string;
   verified_at?: string;
-  user?: {
+  profile?: {
     email: string;
     full_name?: string;
   };
@@ -107,7 +107,7 @@ export interface RedemptionRequest {
   admin_notes?: string;
   created_at: string;
   processed_at?: string;
-  user?: {
+  profile?: {
     email: string;
     full_name?: string;
   };

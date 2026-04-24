@@ -1,6 +1,7 @@
 import * as React from "react";
 import { AdminLayout } from "@/src/components/admin/AdminLayout";
 import { 
+  LayoutDashboard,
   Users, 
   Briefcase, 
   MessageSquare, 
@@ -53,7 +54,7 @@ export function AdminDashboard() {
 
   if (loading) {
     return (
-      <AdminLayout>
+      <AdminLayout title="System Overview" icon={LayoutDashboard}>
         <div className="flex justify-center py-20">
           <Loader2 className="w-10 h-10 text-gold animate-spin" />
         </div>
@@ -62,11 +63,10 @@ export function AdminDashboard() {
   }
 
   return (
-    <AdminLayout>
+    <AdminLayout title="System Overview" icon={LayoutDashboard}>
       <div className="space-y-8">
         <div>
-          <h1 className="text-4xl font-serif text-white mb-2">System Overview</h1>
-          <p className="text-gray-400">Welcome back, Administrator. Here is the current state of the platform.</p>
+          <p className="text-gray-400 -mt-6 mb-8">Welcome back, Administrator. Here is the current state of the platform.</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

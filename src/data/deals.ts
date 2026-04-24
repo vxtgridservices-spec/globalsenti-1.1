@@ -35,6 +35,8 @@ export interface Deal {
     exclusivity: string;
   };
   is_private?: boolean;
+  computed_tier?: string;
+  is_admin_deal?: boolean;
 }
 
 export const deals: Deal[] = [

@@ -95,12 +95,11 @@ export function AdminUsers() {
   };
 
   return (
-    <AdminLayout>
+    <AdminLayout title="User Management" icon={Users}>
       <div className="space-y-8">
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-4xl font-serif text-white mb-2">User Management</h1>
-            <p className="text-gray-400">Manage platform access, roles, and identity verification status.</p>
+            <p className="text-gray-400 -mt-6 mb-8">Manage platform access, roles, and identity verification status.</p>
           </div>
           <Button className="bg-gold text-background font-bold gap-2">
             <Users className="w-5 h-5" /> Invite User
@@ -137,7 +136,7 @@ export function AdminUsers() {
                             <div className="flex items-center gap-2">
                               <p className="text-white font-medium">{user.full_name || "Anonymous"}</p>
                               {user.verification_status === 'verified' && (
-                                <ShieldCheck className="w-3 h-3 text-gold" title="Verified Broker" />
+                                <ShieldCheck className="w-3 h-3 text-gold" />
                               )}
                             </div>
                             <p className="text-xs text-gray-500 flex items-center gap-1 leading-none">

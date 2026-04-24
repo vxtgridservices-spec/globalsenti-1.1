@@ -11,6 +11,7 @@ import {
 import { Button } from "@/src/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui/card";
 import { 
+  Shield,
   Plus, 
   Search, 
   Edit2, 
@@ -86,11 +87,10 @@ export function BrokerDealsReview() {
   };
 
   return (
-    <AdminLayout>
+    <AdminLayout title="Broker Deal Reviews" icon={Shield}>
       <div className="space-y-8">
         <div>
-          <h1 className="text-4xl font-serif text-white mb-2">Broker Deal Reviews</h1>
-          <p className="text-gray-400">Review and approve broker-created commodity listings before they go live.</p>
+          <p className="text-gray-400 -mt-6 mb-8">Review and approve broker-created commodity listings before they go live.</p>
         </div>
 
         <Card className="bg-secondary/20 border-white/5">

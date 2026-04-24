@@ -11,7 +11,8 @@ import {
   Menu,
   X,
   Loader2,
-  TrendingUp
+  TrendingUp,
+  FlaskConical
 } from "lucide-react";
 import { Button } from "@/src/components/ui/button";
 import { cn } from "@/src/lib/utils";
@@ -19,9 +20,11 @@ import { supabase } from "@/src/lib/supabase";
 
 interface AdminLayoutProps {
   children: React.ReactNode;
+  title?: string;
+  icon?: React.ElementType;
 }
 
-export function AdminLayout({ children }: AdminLayoutProps) {
+export function AdminLayout({ children, title, icon: Icon }: AdminLayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
@@ -63,6 +66,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
     { label: "Users", icon: Users, path: "/admin/users" },
     { label: "Documents", icon: FileText, path: "/admin/documents" },
     { label: "Investments", icon: TrendingUp, path: "/admin/investments" },
+    { label: "Chemicals", icon: FlaskConical, path: "/admin/chemicals" },
   ];
 
   const handleLogout = async () => {
@@ -91,7 +95,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
           </Link>
         </div>
 
-        <nav className="flex-grow px-4 space-y-2">
+        <nav className="flex-grow px-4 space-y-2 overflow-y-auto custom-scrollbar">
           {navItems.map((item) => (
             <Link
               key={item.path}
@@ -165,6 +169,21 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       {/* Main Content */}
       <main className="flex-grow pt-20 lg:pt-0">
         <div className="p-8 lg:p-12 max-w-7xl mx-auto">
+          {(title || Icon) && (
+            <div className="flex items-center gap-4 mb-8">
+              {Icon && (
+                <div className="w-12 h-12 rounded-xl bg-gold/10 border border-gold/20 flex items-center justify-center">
+                  <Icon className="w-6 h-6 text-gold" />
+                </div>
+              )}
+              {title && (
+                <div>
+                  <h1 className="text-2xl md:text-3xl font-serif font-bold text-white">{title}</h1>
+                  <p className="text-gray-400 text-sm">Administrative Control Panel</p>
+                </div>
+              )}
+            </div>
+          )}
           {children}
         </div>
       </main>

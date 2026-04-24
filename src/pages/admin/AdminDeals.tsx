@@ -11,6 +11,7 @@ import {
 import { Button } from "@/src/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui/card";
 import { 
+  Briefcase,
   Plus, 
   Search, 
   Edit2, 
@@ -298,12 +299,11 @@ export function AdminDeals() {
   };
 
   return (
-    <AdminLayout>
+    <AdminLayout title="Deal Management" icon={Briefcase}>
       <div className="space-y-8">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
-            <h1 className="text-4xl font-serif text-white mb-2">Deal Management</h1>
-            <p className="text-gray-400">Manage commodity listings and private deal room inventory.</p>
+            <p className="text-gray-400 -mt-6 mb-8">Manage commodity listings and private deal room inventory.</p>
           </div>
           
           <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>

@@ -161,11 +161,10 @@ export function AdminRequests() {
   };
 
   return (
-    <AdminLayout>
+    <AdminLayout title="Request Management" icon={MessageSquare}>
       <div className="space-y-8">
         <div>
-          <h1 className="text-4xl font-serif text-white mb-2">Request Management</h1>
-          <p className="text-gray-400">Review purchase requests and broker inquiries from the platform.</p>
+          <p className="text-gray-400 -mt-6 mb-8">Review purchase requests and broker inquiries from the platform.</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

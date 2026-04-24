@@ -23,12 +23,11 @@ export function AdminDocuments() {
   ];
 
   return (
-    <AdminLayout>
+    <AdminLayout title="Document Vault" icon={FileText}>
       <div className="space-y-8">
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-4xl font-serif text-white mb-2">Document Vault</h1>
-            <p className="text-gray-400">Secure management of manifests, certificates, and compliance documentation.</p>
+            <p className="text-gray-400 -mt-6 mb-8">Secure management of manifests, certificates, and compliance documentation.</p>
           </div>
           <Button className="bg-gold text-background font-bold gap-2">
             <Upload className="w-5 h-5" /> Upload Document

@@ -34,6 +34,10 @@ import { InvestmentMarketplace } from "./pages/investments/InvestmentMarketplace
 import { InvestmentPortfolio } from "./pages/investments/InvestmentPortfolio";
 import { LedgerVerification } from "./pages/investments/LedgerVerification";
 import { AdminInvestments } from "./pages/admin/AdminInvestments";
+import { ChemicalMarketplace } from "./pages/chemicals/ChemicalMarketplace";
+import { ChemicalDashboard } from "./pages/chemicals/ChemicalDashboard";
+import { AdminChemicals } from "./pages/chemicals/AdminChemicals";
+import { ProductDetail } from "./pages/chemicals/ProductDetail";
 import { supabase } from "./lib/supabase";
 
 function ScrollToTop() {
@@ -63,7 +67,7 @@ function AuthListener() {
         console.log("Token Refreshed Successfully");
       }
 
-      if (event === 'TOKEN_REFRESH_FAILURE') {
+      if ((event as string) === 'TOKEN_REFRESH_FAILURE') {
         console.error("Critical Auth Error: Token refresh failed. Signing out.");
         await supabase.auth.signOut();
         navigate('/portal');
@@ -133,6 +137,10 @@ export default function App() {
         <Route path="/investments/portfolio" element={<InvestmentPortfolio />} />
         <Route path="/investments/ledger/:id" element={<LedgerVerification />} />
         <Route path="/admin/investments" element={<AdminInvestments />} />
+        <Route path="/chemicals" element={<ChemicalMarketplace />} />
+        <Route path="/chemicals/product/:id" element={<ProductDetail />} />
+        <Route path="/chemicals/dashboard" element={<ChemicalDashboard />} />
+        <Route path="/admin/chemicals" element={<AdminChemicals />} />
       </Routes>
     </Router>
   );

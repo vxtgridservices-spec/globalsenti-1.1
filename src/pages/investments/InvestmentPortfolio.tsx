@@ -634,12 +634,12 @@ export function InvestmentPortfolio() {
 
     // Basic validation
     if (redemptionForm.destinationType === 'Bank') {
-        if (!destination.beneficiary || !destination.iban) {
+        if (!redemptionForm.bankDetails.beneficiary || !redemptionForm.bankDetails.iban) {
             alert("Please provide beneficiary name and IBAN/Account.");
             return;
         }
     } else {
-        if (!destination.address) {
+        if (!redemptionForm.cryptoDetails.address) {
             alert("Please provide a wallet address.");
             return;
         }

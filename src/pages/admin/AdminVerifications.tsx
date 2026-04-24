@@ -11,6 +11,7 @@ import {
 import { Button } from "@/src/components/ui/button";
 import { Card, CardContent } from "@/src/components/ui/card";
 import { 
+  Shield,
   ShieldCheck, 
   ShieldAlert, 
   FileText, 
@@ -80,11 +81,10 @@ export function AdminVerifications() {
   };
 
   return (
-    <AdminLayout>
+    <AdminLayout title="Broker Verifications" icon={Shield}>
       <div className="space-y-8">
         <div>
-          <h1 className="text-4xl font-serif text-white mb-2">Broker Verifications</h1>
-          <p className="text-gray-400">Review and verify professional broker applications.</p>
+          <p className="text-gray-400 -mt-6 mb-8">Review and verify professional broker applications.</p>
         </div>
 
         <Card className="bg-secondary/20 border-white/5">

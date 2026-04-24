@@ -194,7 +194,7 @@ export function PurchaseRequestModal({ isOpen, onClose, deal }: ModalProps) {
               </Label>
               <Select
                 required
-                onValueChange={(value) =>
+                onValueChange={(value: string) =>
                   setFormData({ ...formData, paymentMethod: value })
                 }
               >

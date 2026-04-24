@@ -192,9 +192,14 @@ export function Dashboard() {
         <div className="container mx-auto max-w-6xl">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-12">
             <h1 className="text-4xl md:text-7xl font-serif text-white">Client Dashboard</h1>
-            <Button onClick={handleSignOut} variant="outline" className="border-white/10 text-white hover:bg-white/5 w-full md:w-auto">
-              Sign Out
-            </Button>
+            <div className="flex gap-4 w-full md:w-auto">
+              <Button onClick={() => navigate('/chemicals/dashboard')} variant="outline" className="border-gold text-gold hover:bg-gold/10 w-full md:w-auto gap-2">
+                 <Package className="w-4 h-4" /> Chemical Division
+              </Button>
+              <Button onClick={handleSignOut} variant="outline" className="border-white/10 text-white hover:bg-white/5 w-full md:w-auto">
+                Sign Out
+              </Button>
+            </div>
           </div>
 
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-12">

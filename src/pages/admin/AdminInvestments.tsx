@@ -1,5 +1,5 @@
 import * as React from "react";
-import { PageLayout } from "@/src/components/layout/PageLayout";
+import { AdminLayout } from "@/src/components/admin/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/src/components/ui/card";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
@@ -914,11 +914,9 @@ export function AdminInvestments() {
   };
 
   return (
-    <PageLayout 
-        title="Investment Control Center" 
-        subtitle="Manage investment products, monitor global performance, and update fund valuations."
-    >
-      <div className="container mx-auto px-4 py-8">
+    <AdminLayout title="Investment Control Center" icon={TrendingUp}>
+      <div className="space-y-8">
+        <p className="text-gray-400 -mt-6 mb-8">Manage investment products, monitor global performance, and update fund valuations.</p>
 
         {/* Database Status Banner */}
         {dbStatus !== 'connected' && (
@@ -1849,8 +1847,8 @@ export function AdminInvestments() {
                  </motion.div>
             </div>
         )}
-      </div>
-    </PageLayout>
+        </div>
+    </AdminLayout>
   );
 }
 
