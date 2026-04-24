@@ -8,8 +8,32 @@ import { Button } from '@/src/components/ui/button';
 import { ShoppingCart, Star, ArrowLeft, Send } from 'lucide-react';
 import { Textarea } from '@/src/components/ui/textarea';
 import { Input } from '@/src/components/ui/input';
+import { cn } from '@/src/lib/utils';
+import { getSmartImageUrl } from '@/src/lib/imageUtils';
 import { motion } from 'motion/react';
 import DOMPurify from 'dompurify';
+
+function DetailImage({ src, alt, className }: { src: string; alt: string; className?: string }) {
+    const [loaded, setLoaded] = React.useState(false);
+    return (
+        <div className={cn("bg-[#0A0A0A] relative overflow-hidden", className)}>
+            {!loaded && (
+                <div className="absolute inset-0 animate-pulse bg-white/5" />
+            )}
+            <img 
+                src={src} 
+                alt={alt}
+                width={800}
+                height={800}
+                onLoad={() => setLoaded(true)}
+                className={cn(
+                    "w-full h-full object-cover transition-opacity duration-1000",
+                    loaded ? "opacity-100" : "opacity-0"
+                )}
+            />
+        </div>
+    );
+}
 
 export function ProductDetail() {
     const { id } = useParams();
@@ -91,17 +115,17 @@ export function ProductDetail() {
 
     if (loading) return <div className="min-h-screen bg-[#0A0A0A] flex items-center justify-center"><div className="w-8 h-8 rounded-full border-2 border-gold border-t-transparent animate-spin"></div></div>;
 
-    if (!product) return <div className="min-h-screen bg-[#0A0A0A] text-white flex items-center justify-center p-8 text-center flex-col"><p className="text-xl text-gray-400 mb-4">Product not found.</p><Button onClick={() => navigate('/chemicals')}>Back to Catalog</Button></div>;
+    if (!product) return <div className="min-h-screen bg-[#0A0A0A] text-white flex items-center justify-center p-8 text-center flex-col"><p className="text-xl text-gray-400 mb-4">Product not found.</p><Button onClick={() => navigate('/chemicals/catalog')}>Back to Catalog</Button></div>;
 
     const avgRating = reviews.length > 0 ? (reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length).toFixed(1) : '0.0';
 
     return (
-        <div className="min-h-screen bg-[#0A0A0A] text-white selection:bg-gold/30 selection:text-gold flex flex-col">
+        <div className="min-h-screen bg-black text-white selection:bg-gold selection:text-black flex flex-col font-sans">
             <Navbar />
 
-            <div className="flex-1 mt-20 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
-                <Button variant="ghost" size="sm" onClick={() => navigate('/chemicals')} className="mb-6 text-gray-400 hover:text-white hover:bg-white/5 text-xs h-8">
-                    <ArrowLeft className="w-3.5 h-3.5 mr-1.5" /> Back to Products
+            <div className="flex-1 mt-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
+                <Button variant="ghost" size="sm" onClick={() => navigate('/chemicals/catalog')} className="mb-8 text-gray-500 hover:text-white hover:bg-white/5 text-[10px] uppercase tracking-widest h-8">
+                    <ArrowLeft className="w-3.5 h-3.5 mr-2" /> Return to Catalog
                 </Button>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-10">
@@ -110,7 +134,11 @@ export function ProductDetail() {
                         {/* Header Details */}
                         <div className="flex flex-col sm:flex-row gap-6 items-start">
                             {product.image_url && (
-                                <img src={product.image_url} alt={product.name} className="w-32 h-32 sm:w-40 sm:h-40 object-cover rounded-xl border border-white/10 shadow-lg shadow-black/40 shrink-0" />
+                                <DetailImage 
+                                    src={getSmartImageUrl(product.image_url, { width: 800 })} 
+                                    alt={product.name} 
+                                    className="w-32 h-32 sm:w-40 sm:h-40 rounded-xl border border-white/10 shadow-lg shadow-black/40 shrink-0" 
+                                />
                             )}
                             <div className="flex-1">
                                 <div className="flex items-center gap-3 mb-3">
@@ -128,8 +156,8 @@ export function ProductDetail() {
                                         <span className="text-gray-500 text-xs ml-0.5">({reviews.length} reviews)</span>
                                     </div>
                                 </div>
-                                <h1 className="text-2xl sm:text-3xl font-serif mb-3 leading-tight">{product.name}</h1>
-                                <p className="text-gray-400 text-sm leading-relaxed">{product.description}</p>
+                                <h1 className="text-4xl sm:text-6xl font-serif mb-6 leading-tight tracking-tight">{product.name}</h1>
+                                <p className="text-gray-400 text-base leading-relaxed font-light">{product.description}</p>
                             </div>
                         </div>
 
@@ -275,21 +303,21 @@ export function ProductDetail() {
 
                     {/* Sidebar / Order Card */}
                     <div className="lg:col-span-1">
-                        <div className="sticky top-24 p-6 border border-white/5 bg-[#111] rounded-2xl space-y-6 shadow-xl shadow-black/50">
-                            <div className="space-y-1">
-                                <p className="text-xs text-gray-500 uppercase tracking-wider font-semibold">Price/{product.unit_type}</p>
-                                <p className="text-2xl font-mono tracking-tight text-white">${product.price_per_unit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                        <div className="sticky top-28 p-8 border border-white/10 bg-white/5 backdrop-blur-3xl rounded-none space-y-8 shadow-2xl">
+                            <div className="space-y-2">
+                                <p className="text-[10px] text-gray-500 uppercase tracking-[0.2em] font-bold">Standard Price Basis</p>
+                                <p className="text-4xl font-mono tracking-tighter text-white">${product.price_per_unit.toLocaleString(undefined, { minimumFractionDigits: 2 })}<span className="text-sm text-gray-600 ml-2 font-sans font-light capitalize">Per {product.unit_type}</span></p>
                             </div>
                             
-                            <div className="p-4 bg-black/30 rounded-xl space-y-3 border border-white/5">
-                                <div className="flex justify-between text-sm">
-                                    <span className="text-gray-400">Minimum Order</span>
-                                    <span className="font-medium text-white">{product.min_order} {product.unit_type}s</span>
+                            <div className="p-6 bg-black/40 rounded-none space-y-4 border border-white/5">
+                                <div className="flex justify-between text-xs">
+                                    <span className="text-gray-500 uppercase tracking-widest">Minimum Allocation</span>
+                                    <span className="font-bold text-white">{product.min_order} {product.unit_type}s</span>
                                 </div>
-                                <div className="flex justify-between text-sm">
-                                    <span className="text-gray-400">Availability</span>
-                                    <span className="font-medium text-green-400 flex items-center gap-1.5">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-green-400"></div>
+                                <div className="flex justify-between text-xs">
+                                    <span className="text-gray-500 uppercase tracking-widest">Global Status</span>
+                                    <span className="font-bold text-green-400 flex items-center gap-2">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></div>
                                         {product.status}
                                     </span>
                                 </div>
@@ -297,9 +325,9 @@ export function ProductDetail() {
 
                             <Button 
                                 onClick={handleOrderClick} 
-                                className="w-full h-11 bg-gold hover:bg-gold/90 text-black font-bold uppercase tracking-wide text-sm rounded-xl transition-all shadow-lg shadow-gold/10 hover:shadow-gold/20"
+                                className="w-full h-16 bg-gold hover:bg-gold-dark text-black font-black uppercase tracking-[0.2em] text-[10px] rounded-none transition-all shadow-2xl hover:scale-105 active:scale-95"
                             >
-                                {user ? "Order Now" : "Login to Order"} <ShoppingCart className="w-4 h-4 ml-2" />
+                                {user ? "Initiate Acquisition" : "Authentication Required"} <ShoppingCart className="w-4 h-4 ml-3" />
                             </Button>
 
                             <p className="text-[11px] text-gray-500 text-center leading-relaxed">

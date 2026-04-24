@@ -34,7 +34,8 @@ import { InvestmentMarketplace } from "./pages/investments/InvestmentMarketplace
 import { InvestmentPortfolio } from "./pages/investments/InvestmentPortfolio";
 import { LedgerVerification } from "./pages/investments/LedgerVerification";
 import { AdminInvestments } from "./pages/admin/AdminInvestments";
-import { ChemicalMarketplace } from "./pages/chemicals/ChemicalMarketplace";
+import { ChemicalLandingPage } from "./pages/chemicals/ChemicalLandingPage";
+import { ChemicalCatalog } from "./pages/chemicals/ChemicalCatalog";
 import { ChemicalDashboard } from "./pages/chemicals/ChemicalDashboard";
 import { AdminChemicals } from "./pages/chemicals/AdminChemicals";
 import { ProductDetail } from "./pages/chemicals/ProductDetail";
@@ -137,7 +138,8 @@ export default function App() {
         <Route path="/investments/portfolio" element={<InvestmentPortfolio />} />
         <Route path="/investments/ledger/:id" element={<LedgerVerification />} />
         <Route path="/admin/investments" element={<AdminInvestments />} />
-        <Route path="/chemicals" element={<ChemicalMarketplace />} />
+        <Route path="/chemicals" element={<ChemicalLandingPage />} />
+        <Route path="/chemicals/catalog" element={<ChemicalCatalog />} />
         <Route path="/chemicals/product/:id" element={<ProductDetail />} />
         <Route path="/chemicals/dashboard" element={<ChemicalDashboard />} />
         <Route path="/admin/chemicals" element={<AdminChemicals />} />

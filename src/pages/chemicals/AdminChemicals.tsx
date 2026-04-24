@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/src/componen
 import { Textarea } from "@/src/components/ui/textarea";
 import { supabase } from "@/src/lib/supabase";
 import { ChemicalProduct, ChemicalOrder, ChemicalDocument } from "@/src/types/chemicals";
-import { Loader2, PackagePlus, FileText, CheckCircle, Database, FlaskConical, Copy, Check, FileDown, ShieldCheck, X } from "lucide-react";
+import { Loader2, PackagePlus, FileText, CheckCircle, Database, FlaskConical, Copy, Check, FileDown, ShieldCheck, X, Image as ImageIcon } from "lucide-react";
 import { generateChemicalDocument } from "@/src/services/chemicalPdfService";
 import { RichTextEditor } from "@/src/components/ui/RichTextEditor";
 
@@ -167,7 +167,7 @@ export function AdminChemicals() {
     const [loading, setLoading] = React.useState(true);
     
     // UI State
-    const [activeTab, setActiveTab] = React.useState<'orders'|'products'|'settings'>('orders');
+    const [activeTab, setActiveTab] = React.useState<'orders'|'products'|'cms'|'settings'>('orders');
     
     // Site Settings State
     const [siteSettings, setSiteSettings] = React.useState<any>({});
@@ -413,6 +413,14 @@ export function AdminChemicals() {
                     Product Inventory
                 </Button>
                 <Button 
+                    variant={activeTab === 'cms' ? 'default' : 'outline'}
+                    onClick={() => setActiveTab('cms')}
+                    disabled={loading}
+                    className={activeTab === 'cms' ? 'bg-gold hover:bg-gold/90 text-black' : 'border-white/10 text-white'}
+                >
+                    Chemical CMS
+                </Button>
+                <Button 
                     variant={activeTab === 'settings' ? 'default' : 'outline'}
                     onClick={() => setActiveTab('settings')}
                     disabled={loading}
@@ -487,50 +495,299 @@ export function AdminChemicals() {
                         </Table>
                     </CardContent>
                 </Card>
-            ) : activeTab === 'settings' ? (
-                <div className="space-y-6">
-                    <div className="grid md:grid-cols-2 gap-6">
+            ) : activeTab === 'cms' ? (
+                <div className="space-y-8 animate-in fade-in duration-500">
+                    <div className="flex items-center justify-between">
+                        <h2 className="text-xl font-serif text-white uppercase tracking-widest">Chemical Division CMS</h2>
+                        <Button
+                            onClick={handleSaveAllSettings}
+                            disabled={Object.keys(pendingSettings).length === 0 || savingSettings}
+                            className="bg-gold text-black hover:bg-gold/90 font-bold px-8 h-10 shadow-lg shadow-gold/20"
+                        >
+                            {savingSettings ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <ShieldCheck className="w-4 h-4 mr-2" />}
+                            Publish CMS Changes
+                        </Button>
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        {/* HERO SECTION */}
                         <Card className="bg-[#0A0A0A] border-white/5">
-                            <CardHeader>
-                                <CardTitle className="text-white">Chemical Hero Manager</CardTitle>
+                            <CardHeader className="border-b border-white/5">
+                                <CardTitle className="text-white text-sm uppercase tracking-tighter">Hero Section</CardTitle>
                             </CardHeader>
-                            <CardContent className="space-y-4">
-                                <div className="space-y-2">
-                                    <Label className="text-gray-400">Hero Section Image</Label>
-                                    {(pendingSettings.chemical_hero_image?.url || siteSettings.chemical_hero_image?.url) && (
-                                        <div className="aspect-[21/9] w-full mb-4 rounded-lg overflow-hidden border border-white/10 relative group">
-                                            <img src={pendingSettings.chemical_hero_image?.url || siteSettings.chemical_hero_image?.url} alt="Hero Preview" className="w-full h-full object-cover" />
-                                            {pendingSettings.chemical_hero_image?.url && <div className="absolute top-2 right-2 bg-gold text-black text-[10px] font-bold px-2 py-0.5 rounded shadow-lg uppercase">Unsaved Preview</div>}
+                            <CardContent className="p-6 space-y-4">
+                                <div className="space-y-4">
+                                    <div className="space-y-2">
+                                        <Label className="text-gray-400">Hero Image</Label>
+                                        <div className="relative aspect-video rounded-lg overflow-hidden border border-white/10 mb-2">
+                                            <img 
+                                                src={pendingSettings.chem_landing_hero?.image_url || siteSettings.chem_landing_hero?.image_url || "https://images.unsplash.com/photo-1581093458791-9f3c3900df4b?q=80&w=2070&auto=format&fit=crop"} 
+                                                className="w-full h-full object-cover opacity-60"
+                                            />
+                                            <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                                                <div className="text-center p-4">
+                                                    <h3 className="text-white font-serif text-lg leading-tight">
+                                                        {pendingSettings.chem_landing_hero?.title || siteSettings.chem_landing_hero?.title || "Swiss Advanced Chemical Laboratory"}
+                                                    </h3>
+                                                </div>
+                                            </div>
                                         </div>
-                                    )}
-                                    <div className="flex gap-2">
-                                        <Input 
-                                            type="file" 
-                                            accept="image/*" 
-                                            className="bg-black border-white/10 flex-1 h-9 text-xs" 
-                                            onChange={(e) => {
-                                                const file = e.target.files?.[0];
-                                                if (file) {
-                                                    const reader = new FileReader();
-                                                    reader.onloadend = () => {
-                                                        handlePendingSettingChange('chemical_hero_image', { url: reader.result as string });
-                                                    };
-                                                    reader.readAsDataURL(file);
-                                                }
+                                        <div className="flex gap-2">
+                                            <Input
+                                                placeholder="Hero Image URL"
+                                                className="bg-black border-white/10 h-9 text-xs"
+                                                value={pendingSettings.chem_landing_hero?.image_url !== undefined ? pendingSettings.chem_landing_hero.image_url : (siteSettings.chem_landing_hero?.image_url || "")}
+                                                onChange={(e) => {
+                                                    const current = pendingSettings.chem_landing_hero || siteSettings.chem_landing_hero || {};
+                                                    handlePendingSettingChange('chem_landing_hero', { ...current, image_url: e.target.value });
+                                                }}
+                                            />
+                                         </div>
+                                     </div>
+                                     <div className="space-y-2">
+                                         <Label className="text-gray-400">Hero Title</Label>
+                                         <Input 
+                                             className="bg-black border-white/10" 
+                                             value={pendingSettings.chem_landing_hero?.title !== undefined ? pendingSettings.chem_landing_hero.title : (siteSettings.chem_landing_hero?.title || "Swiss Advanced Chemical Laboratory")}
+                                             onChange={(e) => {
+                                                 const current = pendingSettings.chem_landing_hero || siteSettings.chem_landing_hero || {};
+                                                 handlePendingSettingChange('chem_landing_hero', { ...current, title: e.target.value });
+                                             }}
+                                         />
+                                     </div>
+                                     <div className="space-y-2">
+                                         <Label className="text-gray-400">Hero Subtitle</Label>
+                                         <Input 
+                                             className="bg-black border-white/10" 
+                                             value={pendingSettings.chem_landing_hero?.subtitle !== undefined ? pendingSettings.chem_landing_hero.subtitle : (siteSettings.chem_landing_hero?.subtitle || "High-value industrial and security-grade chemical solutions")}
+                                             onChange={(e) => {
+                                                 const current = pendingSettings.chem_landing_hero || siteSettings.chem_landing_hero || {};
+                                                 handlePendingSettingChange('chem_landing_hero', { ...current, subtitle: e.target.value });
+                                             }}
+                                         />
+                                     </div>
+                                 </div>
+                            </CardContent>
+                        </Card>
+
+                        {/* WELCOME SECTION */}
+                        <Card className="bg-[#0A0A0A] border-white/5">
+                            <CardHeader className="border-b border-white/5">
+                                <CardTitle className="text-white text-sm uppercase tracking-tighter">Welcome Section</CardTitle>
+                            </CardHeader>
+                            <CardContent className="p-6 space-y-4">
+                                <div className="space-y-4">
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <Label className="text-gray-400">Welcome Image</Label>
+                                            <div className="aspect-square bg-black border border-white/10 rounded overflow-hidden mb-2">
+                                                <img 
+                                                    src={pendingSettings.chem_landing_welcome?.image_url || siteSettings.chem_landing_welcome?.image_url || "https://images.unsplash.com/photo-1532187878418-9f110018b9dc?q=80&w=1000&auto=format&fit=crop"} 
+                                                    className="w-full h-full object-cover"
+                                                />
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <Input
+                                                    placeholder="Welcome Image URL"
+                                                    className="bg-black border-white/10 h-8 text-[10px]"
+                                                    value={pendingSettings.chem_landing_welcome?.image_url !== undefined ? pendingSettings.chem_landing_welcome.image_url : (siteSettings.chem_landing_welcome?.image_url || "")}
+                                                    onChange={(e) => {
+                                                        const current = pendingSettings.chem_landing_welcome || siteSettings.chem_landing_welcome || {};
+                                                        handlePendingSettingChange('chem_landing_welcome', { ...current, image_url: e.target.value });
+                                                    }}
+                                                />
+                                            </div>
+                                        </div>
+                                        <div className="space-y-4">
+                                            <div className="space-y-2">
+                                                <Label className="text-gray-400">Welcome Title</Label>
+                                                <Input 
+                                                    className="bg-black border-white/10" 
+                                                    value={pendingSettings.chem_landing_welcome?.title !== undefined ? pendingSettings.chem_landing_welcome.title : (siteSettings.chem_landing_welcome?.title || "Welcome to Our Chemical Division")}
+                                                    onChange={(e) => {
+                                                        const current = pendingSettings.chem_landing_welcome || siteSettings.chem_landing_welcome || {};
+                                                        handlePendingSettingChange('chem_landing_welcome', { ...current, title: e.target.value });
+                                                    }}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label className="text-gray-400">Welcome Text (Rich Text)</Label>
+                                        <RichTextEditor 
+                                            value={pendingSettings.chem_landing_welcome?.rich_text !== undefined ? pendingSettings.chem_landing_welcome.rich_text : (siteSettings.chem_landing_welcome?.rich_text || "<h3>Excellence in Chemistry</h3><p>We provide advanced solutions for industrial scale operations.</p>")}
+                                            onChange={(html) => {
+                                                const current = pendingSettings.chem_landing_welcome || siteSettings.chem_landing_welcome || {};
+                                                handlePendingSettingChange('chem_landing_welcome', { ...current, rich_text: html });
                                             }}
                                         />
-                                        <Button variant="outline" size="sm" className="border-white/10 text-white shrink-0 h-9" onClick={() => {
-                                            const url = window.prompt("Enter Image URL", pendingSettings.chemical_hero_image?.url || siteSettings.chemical_hero_image?.url);
-                                            if (url) handlePendingSettingChange('chemical_hero_image', { url });
-                                        }}>
-                                            Manual URL
-                                        </Button>
                                     </div>
-                                    <p className="text-[10px] text-gray-500 italic mt-2">Recommended: High-resolution laboratory or industrial imagery.</p>
                                 </div>
                             </CardContent>
                         </Card>
 
+                        {/* OFFERINGS SECTION */}
+                        <Card className="bg-[#0A0A0A] border-white/5 lg:col-span-2">
+                            <CardHeader className="border-b border-white/5">
+                                <CardTitle className="text-white text-sm uppercase tracking-tighter">Our Offerings (3-4 Cards)</CardTitle>
+                            </CardHeader>
+                            <CardContent className="p-6">
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                                    {[0, 1, 2, 3].map(index => {
+                                        const offerings = pendingSettings.chem_landing_offerings || siteSettings.chem_landing_offerings || [];
+                                        const item = offerings[index] || { title: "", description: "", image_url: "" };
+                                        
+                                        return (
+                                            <div key={index} className="space-y-3 p-4 border border-white/5 bg-white/5 rounded-lg">
+                                                <div className="aspect-video bg-black rounded overflow-hidden mb-2 relative">
+                                                    {item.image_url ? (
+                                                        <img src={item.image_url} className="w-full h-full object-cover" />
+                                                    ) : (
+                                                        <div className="w-full h-full flex items-center justify-center text-gray-700 text-xs italic">No Image</div>
+                                                    )}
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label className="text-gray-400 text-xs">Image URL</Label>
+                                                    <Input 
+                                                        placeholder="https://image-url.com" 
+                                                        className="bg-black border-white/10 h-8 text-xs font-mono"
+                                                        value={item.image_url || ''}
+                                                        onChange={(e) => {
+                                                            const newOfferings = [...offerings];
+                                                            while (newOfferings.length <= index) newOfferings.push({ title: "", description: "", image_url: "" });
+                                                            newOfferings[index] = { ...item, image_url: e.target.value };
+                                                            handlePendingSettingChange('chem_landing_offerings', newOfferings);
+                                                        }}
+                                                    />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label className="text-gray-400 text-xs">Title</Label>
+                                                    <Input 
+                                                        placeholder="Card Title" 
+                                                        className="bg-black border-white/10 h-8 text-xs font-bold"
+                                                        value={item.title}
+                                                        onChange={(e) => {
+                                                            const newOfferings = [...offerings];
+                                                            while (newOfferings.length <= index) newOfferings.push({ title: "", description: "", image_url: "" });
+                                                            newOfferings[index] = { ...item, title: e.target.value };
+                                                            handlePendingSettingChange('chem_landing_offerings', newOfferings);
+                                                        }}
+                                                    />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label className="text-gray-400 text-xs">Description</Label>
+                                                    <Textarea 
+                                                        placeholder="Description" 
+                                                        className="bg-black border-white/10 text-[10px] min-h-[60px]"
+                                                        value={item.description}
+                                                        onChange={(e) => {
+                                                            const newOfferings = [...offerings];
+                                                            while (newOfferings.length <= index) newOfferings.push({ title: "", description: "", image_url: "" });
+                                                            newOfferings[index] = { ...item, description: e.target.value };
+                                                            handlePendingSettingChange('chem_landing_offerings', newOfferings);
+                                                        }}
+                                                    />
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        {/* GALLERY & MEDIA SECTION */}
+                        <Card className="bg-[#0A0A0A] border-white/5">
+                            <CardHeader className="border-b border-white/5">
+                                <CardTitle className="text-white text-sm uppercase tracking-tighter">Media Showcase (Gallery - 5 Slots)</CardTitle>
+                            </CardHeader>
+                            <CardContent className="p-6">
+                                <div className="grid grid-cols-5 gap-2 mb-6">
+                                    {[0, 1, 2, 3, 4].map(index => {
+                                        const gallery = pendingSettings.chem_landing_gallery || siteSettings.chem_landing_gallery || [];
+                                        const url = gallery[index] || "";
+                                        
+                                        return (
+                                            <div key={index} className="space-y-2">
+                                                <Label className="text-gray-400 text-xs">Slot {index+1} URL</Label>
+                                                <Input 
+                                                    placeholder="https://image.url"
+                                                    className="bg-black border-white/10 h-8 text-xs font-mono"
+                                                    value={url}
+                                                    onChange={(e) => {
+                                                        const newGallery = [...gallery];
+                                                        while (newGallery.length <= index) newGallery.push("");
+                                                        newGallery[index] = e.target.value;
+                                                        handlePendingSettingChange('chem_landing_gallery', newGallery);
+                                                    }}
+                                                />
+                                                <div className="aspect-square bg-black border border-white/10 rounded overflow-hidden relative">
+                                                    {url ? (
+                                                        <img src={url} className="w-full h-full object-cover" />
+                                                    ) : (
+                                                        <div className="w-full h-full flex items-center justify-center text-[10px] text-gray-700 italic">No Image</div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                                <div className="space-y-4">
+                                    <Label className="text-gray-400">Video Links (YouTube/Vimeo - 3 Slots)</Label>
+                                    {[0, 1, 2].map(index => {
+                                        const videos = pendingSettings.chem_landing_videos || siteSettings.chem_landing_videos || [];
+                                        const url = videos[index] || "";
+                                        
+                                        return (
+                                            <div key={index} className="flex gap-2 items-center">
+                                                <span className="text-[10px] font-mono text-gray-600 w-4">{index+1}</span>
+                                                <Input 
+                                                    className="bg-black border-white/10 h-8 text-xs" 
+                                                    placeholder="https://youtube.com/watch?v=..." 
+                                                    value={url}
+                                                    onChange={(e) => {
+                                                        const newVideos = [...videos];
+                                                        while (newVideos.length <= index) newVideos.push("");
+                                                        newVideos[index] = e.target.value;
+                                                        handlePendingSettingChange('chem_landing_videos', newVideos);
+                                                    }}
+                                                />
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        {/* PRODUCT PREVIEW SETTINGS */}
+                        <Card className="bg-[#0A0A0A] border-white/5">
+                            <CardHeader className="border-b border-white/5">
+                                <CardTitle className="text-white text-sm uppercase tracking-tighter">Product Catalog Link</CardTitle>
+                            </CardHeader>
+                            <CardContent className="p-6 space-y-4">
+                                <div className="space-y-2">
+                                    <Label className="text-gray-400">Catalog Button Text</Label>
+                                    <Input 
+                                        className="bg-black border-white/10" 
+                                        value={pendingSettings.chem_catalog_btn_text !== undefined ? pendingSettings.chem_catalog_btn_text : (siteSettings.chem_catalog_btn_text || "View Full Catalog")}
+                                        onChange={(e) => handlePendingSettingChange('chem_catalog_btn_text', e.target.value)}
+                                    />
+                                </div>
+                                <div className="p-4 bg-gold/5 border border-gold/10 rounded-lg text-xs leading-relaxed text-gray-400">
+                                    <p className="font-bold text-gold mb-1 underline">Luxury Catalog Design Rules Applied:</p>
+                                    <ul className="list-disc pl-4 space-y-1">
+                                        <li>Full-width grid layouts</li>
+                                        <li>Overlay text styling</li>
+                                        <li>No boxed containers</li>
+                                        <li>Publicly accessible</li>
+                                    </ul>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
+                </div>
+            ) : activeTab === 'settings' ? (
+                <div className="space-y-6">
+                    <div className="grid md:grid-cols-2 gap-6">
                         <Card className="bg-[#0A0A0A] border-white/5">
                             <CardHeader>
                                 <CardTitle className="text-white">Global Preferences</CardTitle>
@@ -818,31 +1075,12 @@ export function AdminChemicals() {
                                     </div>
                                 )}
                                 <div className="flex-1 flex gap-2">
-                                    <Input 
-                                        type="file" 
-                                        accept="image/*" 
-                                        className="bg-black border-white/10 h-9 text-xs" 
-                                        onChange={(e) => {
-                                            const file = e.target.files?.[0];
-                                            if (file) {
-                                                if (file.size > 2 * 1024 * 1024) {
-                                                    alert("File size must be less than 2MB");
-                                                    return;
-                                                }
-                                                const reader = new FileReader();
-                                                reader.onloadend = () => {
-                                                    setEditingProduct((prev: any) => prev ? {...prev, image_url: reader.result as string} : prev);
-                                                };
-                                                reader.readAsDataURL(file);
-                                            }
-                                        }}
+                                    <Input
+                                        placeholder="Product Image URL (e.g. https://images.unsplash.com/...)"
+                                        className="bg-black border-white/10 h-9 text-xs"
+                                        value={editingProduct?.image_url || ''}
+                                        onChange={(e) => setEditingProduct({ ...editingProduct, image_url: e.target.value })}
                                     />
-                                    <Button variant="outline" size="sm" className="border-white/10 text-white shrink-0 h-9" onClick={() => {
-                                        const url = window.prompt("Enter Product Image URL", editingProduct?.image_url || "");
-                                        if (url) setEditingProduct((prev: any) => prev ? {...prev, image_url: url} : prev);
-                                    }}>
-                                        Manual URL
-                                    </Button>
                                 </div>
                             </div>
                         </div>

@@ -7,25 +7,37 @@ import { cn } from "@/src/lib/utils"
 import { Button } from "@/src/components/ui/button"
 import { XIcon } from "lucide-react"
 
-function Sheet({ ...props }: SheetPrimitive.Root.Props) {
+const Sheet = ({ ...props }: SheetPrimitive.Root.Props) => {
   return <SheetPrimitive.Root data-slot="sheet" {...props} />
 }
 
-function SheetTrigger({ ...props }: SheetPrimitive.Trigger.Props) {
-  return <SheetPrimitive.Trigger data-slot="sheet-trigger" {...props} />
-}
+const SheetTrigger = React.forwardRef<
+  HTMLButtonElement,
+  SheetPrimitive.Trigger.Props
+>(({ ...props }, ref) => {
+  return <SheetPrimitive.Trigger ref={ref} data-slot="sheet-trigger" {...props} />
+})
+SheetTrigger.displayName = "SheetTrigger"
 
-function SheetClose({ ...props }: SheetPrimitive.Close.Props) {
-  return <SheetPrimitive.Close data-slot="sheet-close" {...props} />
-}
+const SheetClose = React.forwardRef<
+  HTMLButtonElement,
+  SheetPrimitive.Close.Props
+>(({ ...props }, ref) => {
+  return <SheetPrimitive.Close ref={ref} data-slot="sheet-close" {...props} />
+})
+SheetClose.displayName = "SheetClose"
 
-function SheetPortal({ ...props }: SheetPrimitive.Portal.Props) {
+const SheetPortal = ({ ...props }: SheetPrimitive.Portal.Props) => {
   return <SheetPrimitive.Portal data-slot="sheet-portal" {...props} />
 }
 
-function SheetOverlay({ className, ...props }: SheetPrimitive.Backdrop.Props) {
+const SheetOverlay = React.forwardRef<
+  HTMLDivElement,
+  SheetPrimitive.Backdrop.Props
+>(({ className, ...props }, ref) => {
   return (
     <SheetPrimitive.Backdrop
+      ref={ref}
       data-slot="sheet-overlay"
       className={cn(
         "fixed inset-0 z-50 bg-black/10 transition-opacity duration-150 data-ending-style:opacity-0 data-starting-style:opacity-0 supports-backdrop-filter:backdrop-blur-xs",
@@ -34,22 +46,27 @@ function SheetOverlay({ className, ...props }: SheetPrimitive.Backdrop.Props) {
       {...props}
     />
   )
-}
+})
+SheetOverlay.displayName = "SheetOverlay"
 
-function SheetContent({
+const SheetContent = React.forwardRef<
+  HTMLDivElement,
+  SheetPrimitive.Popup.Props & {
+    side?: "top" | "right" | "bottom" | "left"
+    showCloseButton?: boolean
+  }
+>(({
   className,
   children,
   side = "right",
   showCloseButton = true,
   ...props
-}: SheetPrimitive.Popup.Props & {
-  side?: "top" | "right" | "bottom" | "left"
-  showCloseButton?: boolean
-}) {
+}, ref) => {
   return (
     <SheetPortal>
       <SheetOverlay />
       <SheetPrimitive.Popup
+        ref={ref}
         data-slot="sheet-content"
         data-side={side}
         className={cn(
@@ -78,7 +95,8 @@ function SheetContent({
       </SheetPrimitive.Popup>
     </SheetPortal>
   )
-}
+})
+SheetContent.displayName = "SheetContent"
 
 function SheetHeader({ className, ...props }: React.ComponentProps<"div">) {
   return (
@@ -100,9 +118,13 @@ function SheetFooter({ className, ...props }: React.ComponentProps<"div">) {
   )
 }
 
-function SheetTitle({ className, ...props }: SheetPrimitive.Title.Props) {
+const SheetTitle = React.forwardRef<
+  HTMLHeadingElement,
+  SheetPrimitive.Title.Props
+>(({ className, ...props }, ref) => {
   return (
     <SheetPrimitive.Title
+      ref={ref}
       data-slot="sheet-title"
       className={cn(
         "font-heading text-base font-medium text-foreground",
@@ -111,20 +133,26 @@ function SheetTitle({ className, ...props }: SheetPrimitive.Title.Props) {
       {...props}
     />
   )
-}
+})
+SheetTitle.displayName = "SheetTitle"
 
-function SheetDescription({
+const SheetDescription = React.forwardRef<
+  HTMLParagraphElement,
+  SheetPrimitive.Description.Props
+>(({
   className,
   ...props
-}: SheetPrimitive.Description.Props) {
+}, ref) => {
   return (
     <SheetPrimitive.Description
+      ref={ref}
       data-slot="sheet-description"
       className={cn("text-sm text-muted-foreground", className)}
       {...props}
     />
   )
-}
+})
+SheetDescription.displayName = "SheetDescription"
 
 export {
   Sheet,
