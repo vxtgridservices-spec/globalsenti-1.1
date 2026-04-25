@@ -38,6 +38,7 @@ import {
 } from "@/src/components/ui/select";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/src/lib/supabase";
+import { toast } from "sonner";
 import { Deal } from "@/src/data/deals";
 import { Loader2 } from "lucide-react";
 
@@ -101,15 +102,15 @@ export function BrokerDeals() {
     const activeDealsCount = deals.filter(d => d.status === 'Available').length;
     
     if (tier === 'verified' && activeDealsCount >= 3) {
-      alert("Verification tier limit reached (Max 3 active deals). Upgrade to Premium for 10 deals.");
+      toast.error("Verification tier limit reached (Max 3 active deals). Upgrade to Premium for 10 deals.");
       return;
     }
     if (tier === 'premium' && activeDealsCount >= 10) {
-      alert("Premium tier limit reached (Max 10 active deals). Upgrade to Elite for unlimited.");
+      toast.error("Premium tier limit reached (Max 10 active deals). Upgrade to Elite for unlimited.");
       return;
     }
     if (tier === 'basic') {
-      alert("Basic brokers cannot publish deals. Complete verification first.");
+      toast.error("Basic brokers cannot publish deals. Complete verification first.");
       return;
     }
     
@@ -138,6 +139,7 @@ export function BrokerDeals() {
       
       setDeals([data[0], ...deals]);
       setIsAddModalOpen(false);
+      toast.success("Listing published successfully.");
       setNewDeal({
         type: "Gold",
         status: "Available",
@@ -150,7 +152,7 @@ export function BrokerDeals() {
       });
     } catch (error) {
       console.error("Error adding deal:", error);
-      alert("Failed to add deal.");
+      toast.error("Failed to add deal.");
     } finally {
       setIsSubmitting(false);
     }
@@ -167,9 +169,10 @@ export function BrokerDeals() {
       
       if (error) throw error;
       setDeals(deals.filter(d => d.id !== id));
+      toast.success("Listing deleted successfully.");
     } catch (error) {
       console.error("Error deleting deal:", error);
-      alert("Failed to delete.");
+      toast.error("Failed to delete.");
     }
   };
 

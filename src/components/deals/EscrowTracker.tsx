@@ -2,6 +2,7 @@ import * as React from "react";
 import { ShieldAlert, Landmark, CheckCircle, Clock, FileUp, ExternalLink, Activity } from "lucide-react";
 import { Button } from "@/src/components/ui/button";
 import { supabase } from "@/src/lib/supabase";
+import { toast } from "sonner";
 
 interface EscrowTrackerProps {
   requestId: string;
@@ -128,7 +129,10 @@ export function EscrowTracker({ requestId, dealId, buyerId, brokerId, isAdmin, u
 
   const handleInitiateEscrow = async () => {
     const targetBuyerId = buyerId || userRequest?.metadata?.buyer_id;
-    if (!targetBuyerId) return alert("Buyer ID missing");
+    if (!targetBuyerId) {
+      toast.error("Buyer ID missing");
+      return;
+    }
     
     setInitiating(true);
     try {
@@ -159,10 +163,11 @@ export function EscrowTracker({ requestId, dealId, buyerId, brokerId, isAdmin, u
         setEscrow(data);
       }
 
+      await supabase.from('requests').update({ stage: 'escrow' }).eq('id', requestId);
       await logProtocolEvent("Escrow initiated. Funding window opened for 48 hours.");
     } catch (err) {
       console.error(err);
-      alert("Failed to initiate escrow.");
+      toast.error("Failed to initiate escrow.");
     } finally {
       setInitiating(false);
     }
@@ -220,7 +225,7 @@ export function EscrowTracker({ requestId, dealId, buyerId, brokerId, isAdmin, u
       }
     } catch (err) {
       console.error(err);
-      alert("Failed to update escrow status");
+      toast.error("Failed to update escrow status");
     }
   };
 

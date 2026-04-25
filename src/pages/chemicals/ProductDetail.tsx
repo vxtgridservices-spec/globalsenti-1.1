@@ -1,6 +1,7 @@
 import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/src/lib/supabase';
+import { toast } from "sonner";
 import { ChemicalProduct, ChemicalReview } from '@/src/types/chemicals';
 import { Navbar } from '@/src/components/layout/Navbar';
 import { Footer } from '@/src/components/layout/Footer';
@@ -84,7 +85,7 @@ export function ProductDetail() {
 
     const handleSubmitReview = async () => {
         if (!reviewForm.fullName.trim() || !reviewForm.comment.trim()) {
-            alert("Please provide name and comment.");
+            toast.error("Please provide name and comment.");
             return;
         }
         setSubmittingReview(true);
@@ -100,11 +101,12 @@ export function ProductDetail() {
         if (error) {
             // handle error if table doesn't exist
             if (error.message.includes("relation \"chemical_reviews\" does not exist")) {
-                alert("The database for reviews needs to be initialized. Please contact support.");
+                toast.error("The database for reviews needs to be initialized. Please contact support.");
             } else {
-                alert("Error: " + error.message);
+                toast.error("Error: " + error.message);
             }
         } else {
+            toast.success("Review posted successfully.");
             setReviewForm({ ...reviewForm, comment: '', rating: 5 });
             setShowReviewForm(false);
             const { data: rData } = await supabase.from('chemical_reviews').select('*').eq('product_id', id).order('created_at', { ascending: false });
@@ -224,7 +226,7 @@ export function ProductDetail() {
                                                         const file = e.target.files?.[0];
                                                         if (file) {
                                                             if (file.size > 2 * 1024 * 1024) {
-                                                                alert("File size must be less than 2MB");
+                                                                toast.error("File size must be less than 2MB");
                                                                 return;
                                                             }
                                                             const reader = new FileReader();

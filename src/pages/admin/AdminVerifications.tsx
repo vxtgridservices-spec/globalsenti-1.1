@@ -22,6 +22,7 @@ import {
   Clock
 } from "lucide-react";
 import { supabase } from "@/src/lib/supabase";
+import { toast } from "sonner";
 
 export function AdminVerifications() {
   const [verifications, setVerifications] = React.useState<any[]>([]);
@@ -74,9 +75,10 @@ export function AdminVerifications() {
       if (profileError) throw profileError;
 
       setVerifications(verifications.map(v => v.id === id ? { ...v, status } : v));
+      toast.success(`Verification ${status === 'verified' ? 'approved' : 'rejected'}.`);
     } catch (error) {
       console.error("Error updating verification:", error);
-      alert("Action failed.");
+      toast.error("Action failed.");
     }
   };
 

@@ -1,9 +1,12 @@
+import React, { useState } from "react";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
 import { Textarea } from "@/src/components/ui/textarea";
-import { CheckCircle2, ArrowRight, Lock, Download, TrendingUp } from "lucide-react";
+import { CheckCircle2, ArrowRight, Lock, Download, TrendingUp, Loader2 } from "lucide-react";
 import { motion } from "motion/react";
 import { Link } from "react-router-dom";
+import { supabase } from "@/src/lib/supabase";
+import { toast } from "sonner";
 
 const whyChooseUs = [
   "International Compliance Standards",
@@ -32,6 +35,71 @@ const newsItems = [
 ];
 
 export function BottomGrid() {
+  const [formData, setFormData] = useState({
+    name: "",
+    org: "",
+    email: "",
+    type: "",
+    message: ""
+  });
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!formData.name || !formData.email || !formData.message || !formData.type) {
+      toast.error("Please fill in all required fields.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+
+      // Fetch a fallback deal for schema compliance if required
+      const { data: defaultDeal } = await supabase.from('deals').select('id').limit(1).single();
+      const fallbackDealId = defaultDeal?.id || "DR-2024-001";
+
+      const { error } = await supabase
+        .from('requests')
+        .insert({
+          name: formData.name,
+          company: formData.org,
+          deal_id: fallbackDealId,
+          buyer_id: user?.id || null,
+          status: 'pending',
+          stage: 'initiated',
+          type: 'consultation',
+          metadata: {
+            title: "Footer Consultation Request",
+            commodity: formData.type,
+            type: "Support",
+            buyer_id: user?.id || null,
+            sender_name: formData.name,
+            organization: formData.org,
+            email: formData.email,
+            message: formData.message,
+            source: "Footer Section"
+          }
+        });
+
+      if (error) throw error;
+
+      toast.success("Request submitted successfully.");
+      setFormData({ name: "", org: "", email: "", type: "", message: "" });
+    } catch (err: any) {
+      console.error("Submission error:", err);
+      toast.error("Failed to submit request.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
   return (
     <section className="py-24 bg-background border-t border-white/5">
       <div className="container mx-auto px-4">
@@ -123,20 +191,70 @@ export function BottomGrid() {
                 For serious inquiries and partnership opportunities only.
               </p>
             </div>
-            <form className="space-y-3" onSubmit={(e) => e.preventDefault()}>
-              <Input placeholder="Full Name" className="bg-secondary/20 border-white/5 h-10 text-xs text-white placeholder:text-muted-foreground/50" />
-              <Input placeholder="Organization" className="bg-secondary/20 border-white/5 h-10 text-xs text-white placeholder:text-muted-foreground/50" />
-              <select defaultValue="" className="flex h-10 w-full rounded-md border border-white/5 bg-secondary/20 px-3 py-2 text-xs text-muted-foreground/50 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-gold disabled:cursor-not-allowed disabled:opacity-50 appearance-none">
-                <option value="" disabled>Type of Inquiry</option>
+            <form className="space-y-3" onSubmit={handleSubmit}>
+              <Input 
+                name="name"
+                placeholder="Full Name *" 
+                className="bg-secondary/20 border-white/5 h-10 text-xs text-white placeholder:text-muted-foreground/50" 
+                value={formData.name}
+                onChange={handleChange}
+                required
+              />
+              <Input 
+                name="email"
+                type="email"
+                placeholder="Email Address *" 
+                className="bg-secondary/20 border-white/5 h-10 text-xs text-white placeholder:text-muted-foreground/50" 
+                value={formData.email}
+                onChange={handleChange}
+                required
+              />
+              <Input 
+                name="org"
+                placeholder="Organization" 
+                className="bg-secondary/20 border-white/5 h-10 text-xs text-white placeholder:text-muted-foreground/50" 
+                value={formData.org}
+                onChange={handleChange}
+              />
+              <select 
+                name="type"
+                value={formData.type}
+                onChange={handleChange}
+                required
+                className="flex h-10 w-full rounded-md border border-white/5 bg-secondary/20 px-3 py-2 text-xs text-muted-foreground/50 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-gold disabled:cursor-not-allowed disabled:opacity-50 appearance-none"
+              >
+                <option value="" disabled>Inquiry Type *</option>
                 <option value="security" className="bg-background text-white">Security Operations</option>
                 <option value="logistics" className="bg-background text-white">Secure Logistics</option>
                 <option value="trade" className="bg-background text-white">Commodity Trade</option>
+                <option value="chemicals" className="bg-background text-white">Chemical Industries</option>
+                <option value="investments" className="bg-background text-white">Strategic Investments</option>
                 <option value="partnership" className="bg-background text-white">Strategic Partnership</option>
               </select>
-              <Textarea placeholder="Your Message" className="bg-secondary/20 border-white/5 min-h-[80px] text-xs text-white placeholder:text-muted-foreground/50 resize-none" />
-              <Button className="w-full bg-gold hover:bg-gold-light text-background font-bold h-10 text-[9px] tracking-[0.2em] gap-3">
-                SUBMIT SECURE REQUEST
-                <Lock className="w-3.5 h-3.5" />
+              <Textarea 
+                name="message"
+                placeholder="Your Message *" 
+                className="bg-secondary/20 border-white/5 min-h-[80px] text-xs text-white placeholder:text-muted-foreground/50 resize-none" 
+                value={formData.message}
+                onChange={handleChange}
+                required
+              />
+              <Button 
+                type="submit"
+                disabled={loading}
+                className="w-full bg-gold hover:bg-gold-light text-background font-bold h-10 text-[9px] tracking-[0.2em] gap-3"
+              >
+                {loading ? (
+                  <>
+                    PROCESSING...
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  </>
+                ) : (
+                  <>
+                    SUBMIT SECURE REQUEST
+                    <Lock className="w-3.5 h-3.5" />
+                  </>
+                )}
               </Button>
             </form>
           </div>

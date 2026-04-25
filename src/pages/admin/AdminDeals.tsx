@@ -44,6 +44,7 @@ import {
 } from "@/src/components/ui/select";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/src/lib/supabase";
+import { toast } from "sonner";
 import { Deal } from "@/src/data/deals";
 
 export function AdminDeals() {
@@ -257,6 +258,7 @@ export function AdminDeals() {
       
       setDeals([data[0], ...deals]);
       setIsAddModalOpen(false);
+      toast.success("Deal published successfully.");
       setNewDeal({
         type: "Gold",
         status: "Available",
@@ -275,7 +277,7 @@ export function AdminDeals() {
       });
     } catch (error) {
       console.error("Error adding deal:", error);
-      alert("Failed to add deal.");
+      toast.error("Failed to add deal.");
     } finally {
       setIsSubmitting(false);
     }
@@ -292,9 +294,10 @@ export function AdminDeals() {
       
       if (error) throw error;
       setDeals(deals.filter(d => d.id !== id));
+      toast.success("Deal deleted successfully.");
     } catch (error) {
       console.error("Error deleting deal:", error);
-      alert("Failed to delete deal. Please try again.");
+      toast.error("Failed to delete deal. Please try again.");
     }
   };
 

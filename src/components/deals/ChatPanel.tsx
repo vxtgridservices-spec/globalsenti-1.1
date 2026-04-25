@@ -1,6 +1,7 @@
 import * as React from "react";
 import { supabase } from "@/src/lib/supabase";
 import { Button } from "@/src/components/ui/button";
+import { toast } from "sonner";
 import { Input } from "@/src/components/ui/input";
 import { Send, Loader2, ShieldCheck, CheckCheck, Clock, Info, Check, ChevronDown, ChevronUp, FileCode } from "lucide-react";
 import { cn } from "@/src/lib/utils";
@@ -118,7 +119,7 @@ export function ChatPanel({ requestId, userRequest, userRole: propRole, deal: pr
         // Fetch request details to get deal_id and buyer_id for room context
         const { data: reqData, error: reqError } = await supabase
           .from('requests')
-          .select('deal_id, metadata, broker_id')
+          .select('deal_id, metadata, broker_id, buyer_id')
           .eq('id', requestId)
           .single();
         
@@ -128,7 +129,7 @@ export function ChatPanel({ requestId, userRequest, userRole: propRole, deal: pr
         }
 
         const dealId = reqData.deal_id;
-        const buyerId = reqData.metadata?.buyer_id || null;
+        const buyerId = reqData.buyer_id || reqData.metadata?.buyer_id || null;
         const brokerId = reqData.broker_id;
         if (isActive) setDealInfo({ dealId, buyerId, brokerId });
 
@@ -206,7 +207,7 @@ export function ChatPanel({ requestId, userRequest, userRole: propRole, deal: pr
       if (error) {
         console.error("Transmission Error:", error);
         setNewMessage(messageBody); // Restore if failed
-        alert(`Transmission failed: ${error.message}`);
+        toast.error(`Transmission failed: ${error.message}`);
       }
     } catch (err) {
       console.error("System Error during transmission:", err);

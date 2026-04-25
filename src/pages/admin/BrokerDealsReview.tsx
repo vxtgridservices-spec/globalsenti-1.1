@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { Input } from "@/src/components/ui/input";
 import { supabase } from "@/src/lib/supabase";
+import { toast } from "sonner";
 import { Deal } from "@/src/data/deals";
 import { Link } from "react-router-dom";
 
@@ -62,10 +63,10 @@ export function BrokerDealsReview() {
       
       if (error) throw error;
       setDeals(deals.filter(d => d.id !== id));
-      alert("Deal approved and is now live!");
+      toast.success("Deal approved and is now live!");
     } catch (error) {
       console.error("Error approving deal:", error);
-      alert("Failed to approve deal.");
+      toast.error("Failed to approve deal.");
     }
   };
 
@@ -79,10 +80,10 @@ export function BrokerDealsReview() {
       
       if (error) throw error;
       setDeals(deals.filter(d => d.id !== id));
-      alert("Deal declined and removed.");
+      toast.success("Deal declined and removed.");
     } catch (error) {
       console.error("Error declining deal:", error);
-      alert("Failed to decline deal.");
+      toast.error("Failed to decline deal.");
     }
   };
 

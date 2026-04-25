@@ -31,6 +31,7 @@ import { motion } from "motion/react";
 import { supabase } from "@/src/lib/supabase";
 import { InvestmentProduct, PerformanceUpdate, RiskLevel, ProductStatus, ROIType, DistributionFrequency, InvestmentSubscription, FundingDetails, FundingSubmission, RedemptionRequest } from "@/src/types/investments";
 import { cn } from "@/src/lib/utils";
+import { toast } from "sonner";
 import { AdminChartControls } from "@/src/components/admin/AdminChartControls";
 import { 
   Select, 
@@ -543,12 +544,16 @@ export function AdminInvestments() {
               }
           }
 
-          alert(`Funding ${status.toLowerCase()} successfully.`);
+          if (status === 'Verified') {
+            toast.success(`Funding approved and units allocated.`);
+          } else {
+            toast.info(`Funding ${status.toLowerCase()} successfully.`);
+          }
           fetchFundingQueue();
           fetchSubscriptions();
       } catch (err) {
           console.error("Verification failed:", err);
-          alert("Verification failed. Please check RLS policies or database state.");
+          toast.error("Verification failed. Please check database state.");
       } finally {
           setIsApproving(null);
       }
@@ -596,7 +601,7 @@ export function AdminInvestments() {
             }
         }
 
-        alert(`Redemption request updated to ${status}.`);
+        toast.success(`Redemption request updated to ${status}.`);
         fetchRedemptions();
     } catch (err) {
         console.error("Redemption update failed:", err);
@@ -686,13 +691,13 @@ export function AdminInvestments() {
       if (error) {
           // If product is in use, Supabase will throw a foreign key error
           if (error.code === '23503') {
-              alert("Cannot delete product: It has active subscriptions or positions. Archive it instead.");
+              toast.error("Cannot delete product: It has active subscriptions or positions. Archive it instead.");
               return;
           }
           throw error;
       }
       
-      alert("Product deleted successfully.");
+      toast.success("Product deleted successfully.");
       fetchProducts();
     } catch (err) {
       console.error("Delete failed:", err);
@@ -703,9 +708,9 @@ export function AdminInvestments() {
           const updated = currentProds.filter((p: any) => p.id !== id);
           localStorage.setItem('gs_simulated_products', JSON.stringify(updated));
           setProducts(updated);
-          alert("Product removed from local storage.");
+          toast.success("Product removed from local storage.");
       } else {
-        alert("Delete operation failed.");
+        toast.error("Delete operation failed.");
       }
     }
   };
@@ -719,7 +724,7 @@ export function AdminInvestments() {
   const handleSaveProduct = async () => {
     try {
       if (!newProduct.name || !newProduct.commodity) {
-        alert("Please provide at least a name and commodity.");
+        toast.error("Please provide at least a name and commodity.");
         return;
       }
 
@@ -767,7 +772,7 @@ export function AdminInvestments() {
       setIsAddingProduct(false);
       setSelectedProduct(null);
       fetchProducts();
-      alert(`SUCCESS: Product ${isUpdating ? 'updated' : 'created'} successfully.`);
+      toast.success(`SUCCESS: Product ${isUpdating ? 'updated' : 'created'} successfully.`);
     } catch (err: any) {
       console.error("Save failure:", err);
       
@@ -793,7 +798,7 @@ export function AdminInvestments() {
       setProducts(updated);
       setIsAddingProduct(false);
       setSelectedProduct(null);
-      alert("Note: Saved to local storage (Database table missing or disconnected).");
+      toast.info("Note: Saved to local storage (Database table missing or disconnected).");
     }
   };
 
@@ -809,12 +814,12 @@ export function AdminInvestments() {
             .eq('id', showFundingModal.id);
         
         if (error) throw error;
-        alert("Settlement instructions dispatched to investor.");
+        toast.success("Settlement instructions dispatched to investor.");
         setShowFundingModal(null);
         fetchSubscriptions();
     } catch (err) {
         console.error("Failed to send instructions:", err);
-        alert("Dispatch failed.");
+        toast.error("Dispatch failed.");
     }
   }
 
@@ -854,12 +859,12 @@ export function AdminInvestments() {
             metadata: { units: sub.units, price: sub.unit_price_at_purchase }
         });
 
-        alert(`SUBSCRIPTION FUNDED: Payment approved and ${sub.units} units allocated to investor.`);
+        toast.success(`SUBSCRIPTION FUNDED: Payment approved and ${sub.units} units allocated to investor.`);
         fetchProducts();
         fetchSubscriptions();
     } catch (err) {
         console.error("Approval failed:", err);
-        alert("Action failed. Ensure 'investor_positions' table exists.");
+        toast.error("Action failed. Ensure 'investor_positions' table exists.");
     } finally {
         setIsApproving(null);
     }
@@ -901,10 +906,10 @@ export function AdminInvestments() {
 
        setIsUpdatingPerformance(false);
        fetchProducts();
-       alert(`BROADCAST SUCCESS: Valuation and ROI performance updated for ${selectedProduct.name}.`);
+       toast.success(`BROADCAST SUCCESS: Valuation and ROI performance updated for ${selectedProduct.name}.`);
     } catch (err) {
        console.warn("Update failed:", err);
-       alert("Sync failed. Check database connectivity.");
+       toast.error("Sync failed. Check database connectivity.");
        setIsUpdatingPerformance(false);
     }
   };
@@ -930,13 +935,13 @@ export function AdminInvestments() {
           if (toInsert.length > 0) {
               const { error: insertError } = await supabase.from('price_history').insert(toInsert);
               if (insertError) throw insertError;
-              alert(`Success: Seeded ${toInsert.length} data points for visualization.`);
+              toast.success(`Success: Seeded ${toInsert.length} data points for visualization.`);
           } else {
-              alert("Chart data is already initialized.");
+              toast.info("Chart data is already initialized.");
           }
       } catch (err) {
           console.error("Initialization failed:", err);
-          alert("Data synchronization failed. Table might be missing.");
+          toast.error("Data synchronization failed. Table might be missing.");
       }
   };
 
@@ -1775,7 +1780,7 @@ export function AdminInvestments() {
                             className="absolute top-4 right-4 bg-gold text-background hover:bg-gold-light font-bold"
                             onClick={() => {
                                 navigator.clipboard.writeText(DATABASE_SETUP_SQL);
-                                alert("Full Purchase Flow SQL copied.");
+                                toast.success("Full Purchase Flow SQL copied.");
                             }}
                         >
                             <Copy className="w-3.5 h-3.5 mr-2" /> Copy SQL Code

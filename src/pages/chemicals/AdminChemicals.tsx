@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/src/components/ui/dialog";
 import { Textarea } from "@/src/components/ui/textarea";
 import { supabase } from "@/src/lib/supabase";
+import { toast } from "sonner";
 import { ChemicalProduct, ChemicalOrder, ChemicalDocument } from "@/src/types/chemicals";
 import { Loader2, PackagePlus, FileText, CheckCircle, Database, FlaskConical, Copy, Check, FileDown, ShieldCheck, X, Image as ImageIcon } from "lucide-react";
 import { generateChemicalDocument } from "@/src/services/chemicalPdfService";
@@ -275,7 +276,7 @@ export function AdminChemicals() {
 
     const handleSaveProduct = async () => {
         if (!editingProduct?.name || !editingProduct?.price_per_unit) {
-            alert("Please provide at least a name and price.");
+            toast.error("Please provide at least a name and price.");
             return;
         }
         
@@ -298,11 +299,11 @@ export function AdminChemicals() {
 
         if (error) {
             console.error("Save error:", error);
-            alert(`Error saving product: ${error.message}\n\nMake sure you have run the Sync SQL script in your Supabase SQL Editor.`);
+            toast.error(`Error saving product: ${error.message}. Make sure you have run the Sync SQL script.`);
         } else {
             setEditingProduct(null);
             fetchData();
-            alert("Product saved successfully.");
+            toast.success("Product saved successfully.");
         }
     };
 
@@ -330,11 +331,11 @@ export function AdminChemicals() {
         }).eq('id', editingPaymentFor.id);
         
         if (error) {
-            alert("Error updating instructions: " + error.message);
+            toast.error("Error updating instructions: " + error.message);
         } else {
             setEditingPaymentFor(null);
             fetchData();
-            alert("Payment instructions sent to buyer.");
+            toast.success("Payment instructions sent to buyer.");
         }
     };
 
@@ -348,7 +349,7 @@ export function AdminChemicals() {
         }]);
         setUploadingDocFor(null);
         setDocForm({ title: "", url: "", type: "Invoice" });
-        alert("Document attached to order.");
+        toast.success("Document attached to order.");
     };
 
     const handlePendingSettingChange = (key: string, value: any) => {
@@ -369,7 +370,7 @@ export function AdminChemicals() {
                 console.error("Error saving setting", key, error);
                 hasError = true;
                 if (error.code === 'PGRST205' || error.message?.includes('schema cache')) {
-                    alert("Database schema not synced. Please click 'View SQL' to copy the updated setup commands and run them in your Supabase SQL Editor. The 'site_settings' table is missing.");
+                    toast.error("Database schema not synced. Please click 'View SQL' to copy the updated setup commands.");
                     setSavingSettings(false);
                     return;
                 }
@@ -380,10 +381,10 @@ export function AdminChemicals() {
         
         setSavingSettings(false);
         if (hasError) {
-            alert("Some settings failed to save. Check the console.");
+            toast.error("Some settings failed to save. Check the console.");
         } else {
             setPendingSettings({});
-            alert("Settings saved successfully.");
+            toast.success("Settings saved successfully.");
         }
     };
 

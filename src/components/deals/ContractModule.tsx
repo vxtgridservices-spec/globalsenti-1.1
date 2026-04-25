@@ -1,6 +1,7 @@
 import * as React from "react";
 import { FileText, Download, CheckCircle, Clock, AlertTriangle, FileUp, Loader2, ShieldCheck, PenTool } from "lucide-react";
 import { Button } from "@/src/components/ui/button";
+import { toast } from "sonner";
 import { supabase } from "@/src/lib/supabase";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -239,7 +240,7 @@ export function ContractModule({ requestId, dealId, deal, userRequest, isAdmin, 
       }]);
     } catch (err) {
       console.error(err);
-      alert("Failed to generate contract.");
+      toast.error("Failed to generate contract.");
     } finally {
       setGenerating(false);
     }
@@ -277,7 +278,7 @@ export function ContractModule({ requestId, dealId, deal, userRequest, isAdmin, 
       }]);
     } catch (err) {
       console.error(err);
-      alert("Approval failed.");
+      toast.error("Approval failed.");
     } finally {
       setApproving(false);
     }

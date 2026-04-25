@@ -427,7 +427,12 @@ export function DealRoom() {
               </p>
               <Button 
                 className="w-full bg-gold text-background font-bold"
-                onClick={() => navigate("/contact")}
+                onClick={() => navigate("/contact", { 
+                  state: { 
+                    inquiryType: "commodity", 
+                    prefillMessage: "I am interested in private sourcing for specific commodities..." 
+                  } 
+                })}
               >
                 Request Private Sourcing
               </Button>

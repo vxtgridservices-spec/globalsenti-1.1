@@ -40,6 +40,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/src/lib/supabase";
 import { InvestorPosition, InvestmentSubscription, PerformanceUpdate, FundingSubmission, RedemptionRequest, InvestorTransaction, PriceHistory } from "@/src/types/investments";
 import { cn } from "@/src/lib/utils";
+import { toast } from "sonner";
 import { 
   AlertTriangle,
   ArrowDownCircle,
@@ -558,7 +559,7 @@ export function InvestmentPortfolio() {
 
   const handlePaymentSubmission = async (subId: string) => {
     if (!proofHash.trim()) {
-        alert("Please provide a transaction hash or wire reference.");
+        toast.error("Please provide a transaction hash or wire reference.");
         return;
     }
     try {
@@ -607,13 +608,13 @@ export function InvestmentPortfolio() {
         
         if (txError && txError.code !== '42P01') throw txError;
 
-        alert("Payment confirmation submitted. Our treasury team will verify the funds shortly.");
+        toast.success("Payment confirmation submitted. Our treasury team will verify the funds shortly.");
         setProofHash("");
         setActiveStepId(null);
         fetchData();
     } catch (err) {
         console.error("Submission failed:", err);
-        alert("Submission failed. Please try again.");
+        toast.error("Submission failed. Please try again.");
     } finally {
         setSubmittingPayment(null);
     }
@@ -624,7 +625,7 @@ export function InvestmentPortfolio() {
     if (!selectedPosition) return;
 
     if (redemptionForm.type === 'Partial' && (redemptionForm.units <= 0 || redemptionForm.units > selectedPosition.units)) {
-        alert("Invalid unit quantity for partial redemption.");
+        toast.error("Invalid unit quantity for partial redemption.");
         return;
     }
 
@@ -635,12 +636,12 @@ export function InvestmentPortfolio() {
     // Basic validation
     if (redemptionForm.destinationType === 'Bank') {
         if (!redemptionForm.bankDetails.beneficiary || !redemptionForm.bankDetails.iban) {
-            alert("Please provide beneficiary name and IBAN/Account.");
+            toast.error("Please provide beneficiary name and IBAN/Account.");
             return;
         }
     } else {
         if (!redemptionForm.cryptoDetails.address) {
-            alert("Please provide a wallet address.");
+            toast.error("Please provide a wallet address.");
             return;
         }
     }
@@ -691,7 +692,7 @@ export function InvestmentPortfolio() {
 
         if (txError && txError.code !== '42P01') throw txError;
 
-        alert("Liquidity request successfully submitted to Sentinel Treasury. Subject to review (24-48h).");
+        toast.success("Liquidity request successfully submitted to Sentinel Treasury. Subject to review (24-48h).");
         setShowLiquidityModal(null);
         setRedemptionForm({ 
             units: 0, 
@@ -704,7 +705,7 @@ export function InvestmentPortfolio() {
         fetchData();
     } catch (err) {
         console.error("Redemption failed:", err);
-        alert("Request failed. Please check your connection and try again.");
+        toast.error("Request failed. Please check your connection and try again.");
     } finally {
         setIsRedeeming(false);
     }
@@ -716,7 +717,7 @@ export function InvestmentPortfolio() {
     
     const details = sub.funding_details;
     if (!details) {
-        alert("Funding instructions not yet available. Please wait for treasury dispatch.");
+        toast.info("Funding instructions not yet available. Please wait for treasury dispatch.");
         return;
     }
 
@@ -1234,7 +1235,7 @@ export function InvestmentPortfolio() {
                         className="w-full bg-background text-white hover:bg-background/90 font-bold text-xs h-10"
                         onClick={() => {
                             if (positions.length === 0) {
-                                alert("No active positions available for liquidity request.");
+                                toast.error("No active positions available for liquidity request.");
                                 return;
                             }
                             setShowLiquidityModal(positions[0]);

@@ -23,6 +23,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/src/lib/supabase";
 import { InvestmentProduct } from "@/src/types/investments";
 import { cn } from "@/src/lib/utils";
+import { toast } from "sonner";
 import { Input } from "@/src/components/ui/input";
 import { Label } from "@/src/components/ui/label";
 
@@ -88,19 +89,19 @@ export function InvestmentMarketplace() {
 
       // VALIDATIONS
       if (investUnits > selectedProduct.units_available) {
-          alert(`Error: Only ${selectedProduct.units_available} units available for purchase.`);
+          toast.error(`Error: Only ${selectedProduct.units_available} units available for purchase.`);
           setIsInvesting(false);
           return;
       }
 
       if (totalAmount < selectedProduct.min_investment) {
-          alert(`Minimum investment for this product is $${selectedProduct.min_investment.toLocaleString()}`);
+          toast.error(`Minimum investment for this product is $${selectedProduct.min_investment.toLocaleString()}`);
           setIsInvesting(false);
           return;
       }
 
       if (totalAmount > selectedProduct.max_allocation) {
-          alert(`Maximum allocation for this product per investor is $${selectedProduct.max_allocation.toLocaleString()}`);
+          toast.error(`Maximum allocation for this product per investor is $${selectedProduct.max_allocation.toLocaleString()}`);
           setIsInvesting(false);
           return;
       }
@@ -133,12 +134,14 @@ export function InvestmentMarketplace() {
         // but this is a consistency issue.
       }
 
-      alert(`ALLOCATION SECURED: Your purchase for ${investUnits} units of ${selectedProduct.name} has been reserved. Please complete the funding process in your portfolio to activate this investment.`);
+      toast.success(`ALLOCATION SECURED: Your purchase for ${investUnits} units of ${selectedProduct.name} has been reserved. Please complete the funding process in your portfolio to activate this investment.`, {
+        duration: 10000,
+      });
       navigate("/investments/portfolio");
     } catch (err: any) {
       console.warn("DB Error, check if 'investment_subscriptions' table exists:", err);
       // Fallback for demo
-      alert("Subscription simulated. Action requires 'investment_subscriptions' table for cloud persistence.");
+      toast.info("Subscription simulated. Action requires 'investment_subscriptions' table for cloud persistence.");
       navigate("/investments/portfolio");
     } finally {
       setIsInvesting(true);

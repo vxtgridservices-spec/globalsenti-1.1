@@ -2,6 +2,7 @@ import * as React from "react";
 import { Landmark, ShieldAlert, CheckCircle, FileText, CheckCircle2, Lock, Unlock, Send, AlertTriangle } from "lucide-react";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
+import { toast } from "sonner";
 import { Label } from "@/src/components/ui/label";
 import { supabase } from "@/src/lib/supabase";
 
@@ -148,7 +149,7 @@ export function FundingInstructions({ requestId, paymentMethod, isAdmin, buyerId
 
     } catch (err) {
       console.error(err);
-      alert("Failed to save instructions.");
+      toast.error("Failed to save instructions.");
     } finally {
       setSaving(false);
     }
@@ -189,7 +190,7 @@ export function FundingInstructions({ requestId, paymentMethod, isAdmin, buyerId
       
     } catch (err) {
       console.error(err);
-      alert("Failed to lock instructions.");
+      toast.error("Failed to lock instructions.");
     }
   };
 

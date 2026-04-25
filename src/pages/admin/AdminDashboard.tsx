@@ -25,9 +25,10 @@ export function AdminDashboard() {
   React.useEffect(() => {
     const fetchStats = async () => {
       try {
-        const [dealsRes, requestsRes, usersRes] = await Promise.all([
+        const [dealsRes, requestsRes, inquiriesRes, usersRes] = await Promise.all([
           supabase.from('deals').select('id', { count: 'exact' }),
-          supabase.from('requests').select('id', { count: 'exact' }),
+          supabase.from('requests').select('id', { count: 'exact' }).not('type', 'in', '("consultation","support")'),
+          supabase.from('requests').select('id', { count: 'exact' }).in('type', ['consultation', 'support']),
           supabase.from('profiles').select('id', { count: 'exact' })
         ]);
 
@@ -39,7 +40,7 @@ export function AdminDashboard() {
         setStats([
           { title: "Total Deals", value: dealsRes.count?.toString() || "0", change: "+0%", trend: "up", icon: Briefcase, color: "text-blue-400" },
           { title: "Active Requests", value: requestsRes.count?.toString() || "0", change: "+0%", trend: "up", icon: MessageSquare, color: "text-gold" },
-          { title: "Pending Reviews", value: pendingBrokerDealsRes.count?.toString() || "0", change: "+0%", trend: "up", icon: ShieldCheck, color: "text-yellow-400" },
+          { title: "Private Inquiries", value: inquiriesRes.count?.toString() || "0", change: "+0%", trend: "up", icon: Users, color: "text-green-400" },
           { title: "Pending KYC", value: pendingKYCRes.count?.toString() || "0", change: "+0%", trend: "down", icon: Users, color: "text-red-400" },
         ]);
       } catch (error) {

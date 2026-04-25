@@ -13,6 +13,7 @@ import {
 } from "@/src/components/ui/select";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/src/lib/supabase";
+import { toast } from "sonner";
 import { Loader2, ArrowLeft, ShieldCheck, Briefcase, Scale, Truck, History, FileText, Plus } from "lucide-react";
 
 export function BrokerCreateDeal() {
@@ -59,17 +60,17 @@ export function BrokerCreateDeal() {
       const activeDealsCount = (existingDeals || []).filter(d => d.status === 'Available').length;
 
       if (tier === 'verified' && activeDealsCount >= 3) {
-        alert("Verification tier limit reached (Max 3 active deals). Upgrade to Premium for 10 deals.");
+        toast.error("Verification tier limit reached (Max 3 active deals). Upgrade to Premium for 10 deals.");
         setIsSubmitting(false);
         return;
       }
       if (tier === 'premium' && activeDealsCount >= 10) {
-        alert("Premium tier limit reached (Max 10 active deals). Upgrade to Elite for unlimited.");
+        toast.error("Premium tier limit reached (Max 10 active deals). Upgrade to Elite for unlimited.");
         setIsSubmitting(false);
         return;
       }
       if (tier === 'basic') {
-        alert("Basic brokers cannot publish deals. Complete verification first.");
+        toast.error("Basic brokers cannot publish deals. Complete verification first.");
         setIsSubmitting(false);
         return;
       }
@@ -119,10 +120,11 @@ export function BrokerCreateDeal() {
       
       if (error) throw error;
       
+      toast.success("Deal created successfully.");
       navigate("/broker/deals");
     } catch (error) {
       console.error("Error creating deal:", error);
-      alert("Failed to create deal.");
+      toast.error("Failed to create deal.");
     } finally {
       setIsSubmitting(false);
     }

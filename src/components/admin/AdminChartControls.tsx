@@ -1,6 +1,7 @@
 import * as React from "react";
 import { supabase } from "@/src/lib/supabase";
 import { Button } from "@/src/components/ui/button";
+import { toast } from "sonner";
 import { Input } from "@/src/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/src/components/ui/select";
@@ -45,7 +46,7 @@ export const AdminChartControls = () => {
   const handleAddCheckpoint = async () => {
     try {
       if (!percentage || !timeline) {
-        alert("Please enter percentage and timeline");
+        toast.error("Please enter percentage and timeline");
         return;
       }
 
@@ -77,12 +78,12 @@ export const AdminChartControls = () => {
         }]);
       
       if (error) throw error;
-      alert(`Market target added! Total ${selectedProductId === "all" ? 'Global' : 'Product'} Value: $${targetValue.toLocaleString()} (${percentage}%) over ${timeline}${timeUnit === 'hours' ? 'h' : 'm'}`);
+      toast.success(`Market target added! Total ${selectedProductId === "all" ? 'Global' : 'Product'} Value: $${targetValue.toLocaleString()} (${percentage}%) over ${timeline}${timeUnit === 'hours' ? 'h' : 'm'}`);
       setPercentage("");
       setTimeline("");
     } catch (err) {
       console.error("Error adding checkpoint:", err);
-      alert("Failed to add checkpoint. Please try running the 'Sync DB' script in the dashboard if this is your first time.");
+      toast.error("Failed to add checkpoint. Please try running the 'Sync DB' script in the dashboard if this is your first time.");
     }
   };
 
@@ -121,10 +122,10 @@ export const AdminChartControls = () => {
         .in('id', ids);
         
     if (!error) {
-        alert("Market trends reset to baseline.");
+        toast.success("Market trends reset to baseline.");
     } else {
         console.error("DB Reset failed:", error.message);
-        alert("Market trends reset locally. Re-sync your Supabase DB to permanently purge the records.");
+        toast.error("Market trends reset locally. Re-sync your Supabase DB to permanently purge the records.");
     }
     fetchCheckpoints();
   };

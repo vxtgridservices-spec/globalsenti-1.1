@@ -6,6 +6,7 @@ import { Input } from "@/src/components/ui/input";
 import { Label } from "@/src/components/ui/label";
 import { supabase } from "@/src/lib/supabase";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import { Loader2, Upload, CheckCircle, AlertCircle, Shield } from "lucide-react";
 
 export function VerifyBroker() {
@@ -78,7 +79,7 @@ export function VerifyBroker() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!files.business || !files.id) {
-      alert("Please upload both required documents.");
+      toast.error("Please upload both required documents.");
       return;
     }
 
@@ -118,7 +119,7 @@ export function VerifyBroker() {
       setIsSubmitted(true);
     } catch (error: any) {
       console.error("Verification error:", error);
-      alert("Submission failed: " + error.message);
+      toast.error("Submission failed: " + error.message);
     } finally {
       setLoading(false);
     }

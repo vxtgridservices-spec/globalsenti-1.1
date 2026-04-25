@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import { Deal } from "@/src/data/deals";
 import { supabase } from "@/src/lib/supabase";
+import { toast } from "sonner";
 import { ALLOWED_TRANSITIONS, STAGE_LABELS, DealStage, ROLE_PERMISSIONS } from "./DealStageTracker";
 import { ChatPanel } from "./ChatPanel";
 import { ShipmentTracker } from "./ShipmentTracker";
@@ -332,7 +333,7 @@ export function DealStageModal({
     
     // Permission check: Buyers cannot update deal stage
     if (userRole === 'buyer') {
-      alert("Permission denied: Buyers cannot modify the transaction stage.");
+      toast.error("Permission denied: Buyers cannot modify the transaction stage.");
       return;
     }
     

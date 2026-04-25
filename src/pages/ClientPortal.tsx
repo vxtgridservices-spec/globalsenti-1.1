@@ -5,6 +5,7 @@ import { Label } from "@/src/components/ui/label";
 import { Shield, Lock, ArrowLeft, Loader2 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/src/lib/supabase";
+import { toast } from "sonner";
 
 export function ClientPortal() {
   const [isLogin, setIsLogin] = useState(true);
@@ -28,7 +29,7 @@ export function ClientPortal() {
         password: formData.password,
       });
       if (error) {
-        alert(error.message);
+        toast.error(error.message);
       } else {
         // Fetch user profile to determine correct redirect
         const { data: { user } } = await supabase.auth.getUser();
@@ -71,9 +72,9 @@ export function ClientPortal() {
       });
       
       if (error) {
-        alert(error.message);
+        toast.error(error.message);
       } else {
-        alert("Access request submitted. Please check your email for verification.");
+        toast.success("Access request submitted. Please check your email for verification.");
         setIsLogin(true);
       }
     }

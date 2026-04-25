@@ -48,7 +48,8 @@ export function AdminRequests() {
       
       setUserProfile(profile);
 
-      let query = supabase.from('requests').select('*');
+      let query = supabase.from('requests').select('*')
+        .not('type', 'in', '("consultation","support")');
 
       // If user is a broker, only show their deals
       if (profile?.role === 'broker') {
@@ -143,10 +144,25 @@ export function AdminRequests() {
       // Log system message
       const targetReq = requests.find(r => r.id === id);
       if (targetReq) {
+        let targetBuyerId = targetReq.buyer_id || targetReq.metadata?.buyer_id || null;
+        
+        if (!targetBuyerId && targetReq.metadata?.email) {
+          const { data: pData } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('email', targetReq.metadata.email)
+            .single();
+          if (pData) {
+            targetBuyerId = pData.id;
+            // Link it
+            await supabase.from('requests').update({ buyer_id: targetBuyerId }).eq('id', targetReq.id);
+          }
+        }
+
         await supabase.from('messages').insert([{
           request_id: targetReq.id,
           deal_id: targetReq.deal_id,
-          buyer_id: targetReq.metadata?.buyer_id || null,
+          buyer_id: targetBuyerId,
           sender_id: user.id,
           sender_role: userProfile?.role || 'admin',
           body: `[PROTOCOL UPDATE] Administration updated status to: ${newStatus.toUpperCase()}`,
@@ -174,7 +190,7 @@ export function AdminRequests() {
                 <ShoppingBag className="w-6 h-6 text-gold" />
               </div>
               <div>
-                <p className="text-xs text-gray-500 uppercase tracking-widest">Global Requests</p>
+                <p className="text-xs text-gray-500 uppercase tracking-widest">Deal Requests</p>
                 <p className="text-2xl font-serif text-white">
                   {requests.length}
                 </p>

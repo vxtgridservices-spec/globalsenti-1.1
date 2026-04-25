@@ -24,6 +24,7 @@ import {
   SelectValue 
 } from "@/src/components/ui/select";
 import { supabase } from "@/src/lib/supabase";
+import { toast } from "sonner";
 
 interface ShipmentTrackerProps {
   requestId: string;
@@ -174,7 +175,7 @@ export function ShipmentTracker({ requestId, dealId, userRole, userRequest, isAd
 
     } catch (err) {
       console.error("Failed to update shipment", err);
-      alert("Update failed. Check connectivity.");
+      toast.error("Update failed. Check connectivity.");
     } finally {
       setIsUpdating(false);
     }

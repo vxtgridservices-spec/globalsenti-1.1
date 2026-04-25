@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/src/lib/supabase";
 import { cn } from "@/src/lib/utils";
+import { toast } from "sonner";
 
 export function BrokerProfile() {
   const [profile, setProfile] = React.useState<any>(null);
@@ -80,10 +81,10 @@ export function BrokerProfile() {
         .eq('id', user.id);
       
       if (error) throw error;
-      alert("Profile updated successfully.");
+      toast.success("Profile updated successfully.");
     } catch (error) {
       console.error("Error updating profile:", error);
-      alert("Failed to update profile.");
+      toast.error("Failed to update profile.");
     } finally {
       setSaving(false);
     }

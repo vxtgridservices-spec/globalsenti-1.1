@@ -61,6 +61,7 @@ export function AdminLayout({ children, title, icon: Icon }: AdminLayoutProps) {
   const navItems = [
     { label: "Dashboard", icon: LayoutDashboard, path: "/admin" },
     { label: "Deals", icon: Briefcase, path: "/admin/deals" },
+    { label: "Consultations", icon: Users, path: "/admin/consultations" },
     { label: "Broker Reviews", icon: Shield, path: "/admin/broker-reviews" },
     { label: "Requests", icon: MessageSquare, path: "/admin/requests" },
     { label: "Verifications", icon: Shield, path: "/admin/verifications" },

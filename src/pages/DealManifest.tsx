@@ -1,6 +1,7 @@
 import * as React from "react";
 import { useParams, useNavigate, Link, useLocation } from "react-router-dom";
 import { supabase } from "@/src/lib/supabase";
+import { toast } from "sonner";
 import { Deal } from "@/src/data/deals";
 import { Loader2, ShieldCheck, Lock, FileText, Download, ArrowLeft, CheckCircle2, Globe, Scale, Truck, BadgeCheck, Briefcase, History, FileSearch, Users } from "lucide-react";
 import jsPDF from "jspdf";
@@ -235,7 +236,8 @@ export function DealManifest() {
             reqQuery = reqQuery.eq('id', ridOverride);
           } else {
             // Buyer view: fetch their own request
-            reqQuery = reqQuery.contains('metadata', { buyer_id: user.id });
+            const orQuery = `buyer_id.eq.${user.id},metadata->>buyer_id.eq.${user.id}${user.email ? `,metadata->>email.eq.${user.email}` : ''}`;
+            reqQuery = reqQuery.or(orQuery);
           }
 
           const { data: reqData } = await reqQuery
@@ -286,7 +288,7 @@ export function DealManifest() {
     
     // Permission check: Only Facilitators can initiate due diligence
     if (userProfile?.role !== 'admin' && userProfile?.role !== 'broker') {
-      alert("Permission denied: Only Global Sentinel Group officers or assigned brokers can initiate this protocol.");
+      toast.error("Permission denied: Only Global Sentinel Group officers or assigned brokers can initiate this protocol.");
       return;
     }
 
@@ -314,10 +316,10 @@ export function DealManifest() {
         }]);
       }
 
-      alert("Due diligence process initiated. Our compliance team will proceed.");
+      toast.success("Due diligence process initiated. Our compliance team will proceed.");
     } catch (err) {
       console.error(err);
-      alert("Failed to initiate due diligence.");
+      toast.error("Failed to initiate due diligence.");
     }
   };
 
@@ -368,7 +370,7 @@ export function DealManifest() {
       }
     } catch (err) {
       console.error("Failed to update stage:", err);
-      alert("Failed to update deal stage.");
+      toast.error("Failed to update deal stage.");
     }
   };
 

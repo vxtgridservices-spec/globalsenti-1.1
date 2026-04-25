@@ -3,6 +3,8 @@ import { supabase } from "@/src/lib/supabase";
 import { Input } from "@/src/components/ui/input";
 import { Button } from "@/src/components/ui/button";
 
+import { toast } from "sonner";
+
 export function AccessGuard({ section, children }: { section: string, children: React.ReactNode }) {
   const [isLocked, setIsLocked] = React.useState(true); // Default to locked for safety
   const [isAuthenticated, setIsAuthenticated] = React.useState(false);
@@ -59,8 +61,9 @@ export function AccessGuard({ section, children }: { section: string, children: 
       setIsAuthenticated(true);
       setIsLocked(false);
       localStorage.setItem(`auth_key_${section}`, trimmedKey);
+      toast.success("Identity verified. Access granted.");
     } else {
-      alert("Invalid Access Key. Please check for errors or contact the administrator.");
+      toast.error("Invalid Access Key. Please check for errors or contact the administrator.");
     }
     setLoading(false);
   };

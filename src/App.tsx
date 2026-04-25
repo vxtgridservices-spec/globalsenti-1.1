@@ -13,6 +13,7 @@ import { ClientPortal } from "./pages/ClientPortal";
 import { Dashboard } from "./pages/Dashboard";
 import { AdminDashboard } from "./pages/admin/AdminDashboard";
 import { AdminDeals } from "./pages/admin/AdminDeals";
+import { AdminConsultations } from "./pages/admin/AdminConsultations";
 import { BrokerDealsReview } from "./pages/admin/BrokerDealsReview";
 import { AdminRequests } from "./pages/admin/AdminRequests";
 import { AdminUsers } from "./pages/admin/AdminUsers";
@@ -42,6 +43,8 @@ import { ChemicalDashboard } from "./pages/chemicals/ChemicalDashboard";
 import { AdminChemicals } from "./pages/chemicals/AdminChemicals";
 import { ProductDetail } from "./pages/chemicals/ProductDetail";
 import { supabase } from "./lib/supabase";
+
+import { Toaster } from "sonner";
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -108,6 +111,7 @@ function AuthListener() {
 export default function App() {
   return (
     <Router>
+      <Toaster position="top-right" theme="dark" closeButton richColors />
       <ScrollToTop />
       <AuthListener />
       <Routes>
@@ -122,6 +126,7 @@ export default function App() {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/admin" element={<AdminDashboard />} />
         <Route path="/admin/deals" element={<AdminDeals />} />
+        <Route path="/admin/consultations" element={<AdminConsultations />} />
         <Route path="/admin/broker-reviews" element={<BrokerDealsReview />} />
         <Route path="/admin/requests" element={<AdminRequests />} />
         <Route path="/admin/verifications" element={<AdminVerifications />} />
