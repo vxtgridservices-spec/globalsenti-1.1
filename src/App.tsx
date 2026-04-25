@@ -36,6 +36,7 @@ import { InvestmentPortfolio } from "./pages/investments/InvestmentPortfolio";
 import { LedgerVerification } from "./pages/investments/LedgerVerification";
 import { AdminInvestments } from "./pages/admin/AdminInvestments";
 import { AdminSecurity } from "./pages/admin/AdminSecurity";
+import { ActivityCenter } from "./pages/ActivityCenter";
 
 import { ChemicalLandingPage } from "./pages/chemicals/ChemicalLandingPage";
 import { ChemicalCatalog } from "./pages/chemicals/ChemicalCatalog";
@@ -45,6 +46,32 @@ import { ProductDetail } from "./pages/chemicals/ProductDetail";
 import { supabase } from "./lib/supabase";
 
 import { Toaster } from "sonner";
+import { TawktoLoader } from "./components/TawktoLoader";
+
+function TitleUpdater() {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    const titles: Record<string, string> = {
+      '/': 'Home',
+      '/about': 'About Us',
+      '/services': 'Services',
+      '/industries': 'Industries',
+      '/dashboard': 'Dashboard',
+      '/admin': 'Admin Dashboard',
+      '/chemicals/dashboard': 'Chemical Dashboard',
+      '/portal': 'Client Portal',
+      '/investments': 'Investment Marketplace',
+      '/deal-room': 'Deal Room',
+      '/activity-center': 'Activity Center',
+    };
+    
+    const pageTitle = titles[pathname] || 'Secure Logistics & Commodity Trade';
+    document.title = `Global Sentinel Group | ${pageTitle}`;
+  }, [pathname]);
+
+  return null;
+}
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -113,7 +140,9 @@ export default function App() {
     <Router>
       <Toaster position="top-right" theme="dark" closeButton richColors />
       <ScrollToTop />
+      <TitleUpdater />
       <AuthListener />
+      <TawktoLoader />
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/about" element={<About />} />
@@ -146,7 +175,8 @@ export default function App() {
         <Route path="/investments/ledger/:id" element={<LedgerVerification />} />
         <Route path="/admin/investments" element={<AdminInvestments />} />
         <Route path="/admin/security" element={<AdminSecurity />} />
-
+        <Route path="/activity-center" element={<ActivityCenter />} />
+        
         <Route path="/chemicals" element={<ChemicalLandingPage />} />
         <Route path="/chemicals/catalog" element={<ChemicalCatalog />} />
         <Route path="/chemicals/product/:id" element={<ProductDetail />} />

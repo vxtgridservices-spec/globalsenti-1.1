@@ -154,7 +154,7 @@ export function Dashboard() {
       }, async () => {
         const reqs = await fetchRequests(profile.id, profile.email);
         if (reqs && reqs.length > 0) {
-           fetchRecentActivity(reqs.map((r: any) => r.id));
+           fetchRecentActivity(profile.id);
         }
       })
       .subscribe();
@@ -462,7 +462,7 @@ export function Dashboard() {
                   <p className="text-muted-foreground text-sm">Real-time status of your global security and logistics projects.</p>
                 </div>
                 <div className="space-y-4">
-                  {operations.length > 0 ? operations.map((op) => (
+                  {operations.slice(0, 5).length > 0 ? operations.slice(0, 5).map((op) => (
                     <Card key={op.id} className="bg-secondary/20 border-white/5 hover:border-white/10 transition-colors">
                       <CardContent className="p-4 flex items-center gap-4">
                         <div className="w-12 h-12 rounded bg-gold/10 flex items-center justify-center shrink-0">
@@ -495,9 +495,11 @@ export function Dashboard() {
                        <p className="text-gray-500 text-sm font-serif italic">No managed operations detected for this profile.</p>
                     </Card>
                   )}
-                  <Link to="/deal-room" className="inline-flex items-center text-gold text-sm font-bold hover:underline mt-2">
-                    View All Operations <ArrowUpRight className="ml-1 w-4 h-4" />
-                  </Link>
+                  {operations.length > 5 && (
+                    <Link to="/activity-center" className="inline-flex items-center text-gold text-sm font-bold hover:underline mt-2">
+                       View All Operations <ArrowUpRight className="ml-1 w-4 h-4" />
+                    </Link>
+                  )}
                 </div>
               </section>
 
@@ -554,9 +556,9 @@ export function Dashboard() {
                   <Activity className="w-5 h-5 text-gold" /> Protocol Activity Feed
                 </h2>
                 <div className="space-y-6">
-                  {activities.length > 0 ? activities.map((activity, i) => (
+                  {activities.slice(0, 5).length > 0 ? activities.slice(0, 5).map((activity, i) => (
                     <div key={i} className="flex gap-4 relative">
-                      {i !== activities.length - 1 && (
+                      {i !== activities.slice(0, 5).length - 1 && (
                         <div className="absolute left-[7px] top-4 bottom-[-24px] w-[2px] bg-white/5" />
                       )}
                       <div className={`w-4 h-4 rounded-full ${activity.type === 'protocol' ? 'bg-blue-500' : (activity.type === 'support' ? 'bg-green-500' : 'bg-gold')} shrink-0 mt-1 shadow-[0_0_8px_rgba(212,175,55,0.3)]`} />
@@ -574,6 +576,11 @@ export function Dashboard() {
                     <div className="text-center py-6">
                        <p className="text-[10px] text-gray-600 uppercase font-black tracking-widest">Awaiting Live Protocol Updates...</p>
                     </div>
+                  )}
+                  {activities.length > 5 && (
+                    <Link to="/activity-center" className="inline-flex items-center text-gold text-sm font-bold hover:underline mt-2">
+                       View All Activities <ArrowUpRight className="ml-1 w-4 h-4" />
+                    </Link>
                   )}
                 </div>
               </section>

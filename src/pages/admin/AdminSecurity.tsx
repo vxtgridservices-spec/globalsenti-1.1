@@ -13,6 +13,7 @@ export function AdminSecurity() {
     chemicals: { is_locked: false, access_key: "" },
     investments: { is_locked: false, access_key: "" },
     deals: { is_locked: false, access_key: "" },
+    tawkto: { is_locked: false, access_key: "" },
   });
 
   const [loading, setLoading] = React.useState(false);
@@ -94,22 +95,46 @@ export function AdminSecurity() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label className="text-[10px] uppercase text-gray-500">Access Key</Label>
-                <div className="flex gap-2">
-                  <Input 
-                    value={config.access_key} 
-                    onChange={(e) => updateSetting(section, 'access_key', e.target.value.toUpperCase())}
-                    className="font-mono bg-black/40 border-white/10" 
-                  />
-                  <Button variant="outline" onClick={() => generateKey(section)}>
-                    <Key className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-              <p className="text-[10px] font-mono text-white/40">
-                {config.is_locked ? "⚠ Key required for visitors" : "✓ Publicly visible"}
-              </p>
+                {section === 'tawkto' ? (
+                  <div className="space-y-4">
+                    <Label className="text-[10px] uppercase text-gray-500">Tawk.to Property ID</Label>
+                    <Input 
+                      value={config.access_key} 
+                      onChange={(e) => updateSetting(section, 'access_key', e.target.value)}
+                      className="font-mono bg-black/40 border-white/10" 
+                    />
+                    <div className="flex items-center gap-2">
+                        <Label>Enabled</Label>
+                        <Button 
+                          size="sm"
+                          variant={config.is_locked ? "default" : "outline"}
+                          className={config.is_locked ? "bg-gold text-black hover:bg-gold/80" : ""}
+                          onClick={() => updateSetting(section, 'is_locked', !config.is_locked)}
+                        >
+                            {config.is_locked ? 'Active' : 'Disabled'}
+                        </Button>
+                    </div>
+                  </div>
+                ) : (
+                    <>
+                      <div className="space-y-2">
+                        <Label className="text-[10px] uppercase text-gray-500">Access Key</Label>
+                        <div className="flex gap-2">
+                          <Input 
+                            value={config.access_key} 
+                            onChange={(e) => updateSetting(section, 'access_key', e.target.value.toUpperCase())}
+                            className="font-mono bg-black/40 border-white/10" 
+                          />
+                          <Button variant="outline" onClick={() => generateKey(section)}>
+                            <Key className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                      <p className="text-[10px] font-mono text-white/40">
+                        {config.is_locked ? "⚠ Key required for visitors" : "✓ Publicly visible"}
+                      </p>
+                    </>
+                )}
             </CardContent>
           </Card>
         ))}
