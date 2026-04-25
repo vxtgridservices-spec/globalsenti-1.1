@@ -1,5 +1,6 @@
 import * as React from "react";
 import { PageLayout } from "@/src/components/layout/PageLayout";
+import { AccessGuard } from "@/src/components/security/AccessGuard";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/src/components/ui/card";
 import { Button } from "@/src/components/ui/button";
 import { 
@@ -218,6 +219,7 @@ export function DealRoom() {
   }, []);
   
   return (
+    <AccessGuard section="deals">
     <PageLayout title="Private Deal Room" subtitle="Exclusive high-value commodity opportunities for verified partners.">
       <div className="container mx-auto px-4 py-12">
         <div className="bg-gold/10 border border-gold/20 rounded-xl p-6 mb-12 flex flex-col md:flex-row items-center gap-6">
@@ -434,5 +436,6 @@ export function DealRoom() {
         </div>
       </div>
     </PageLayout>
+    </AccessGuard>
   );
 }

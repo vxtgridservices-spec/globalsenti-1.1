@@ -1,5 +1,6 @@
 import * as React from "react";
 import { PageLayout } from "@/src/components/layout/PageLayout";
+import { AccessGuard } from "@/src/components/security/AccessGuard";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/src/components/ui/card";
 import { Button } from "@/src/components/ui/button";
 import { 
@@ -118,6 +119,20 @@ export function InvestmentMarketplace() {
 
       if (error) throw error;
 
+      // 2. Update available units on product
+      const { error: updateError } = await supabase
+        .from('investment_products')
+        .update({ 
+          units_available: selectedProduct.units_available - investUnits 
+        })
+        .eq('id', selectedProduct.id);
+      
+      if (updateError) {
+        console.error("Failed to update available units:", updateError);
+        // We still continue because the subscription was recorded, 
+        // but this is a consistency issue.
+      }
+
       alert(`ALLOCATION SECURED: Your purchase for ${investUnits} units of ${selectedProduct.name} has been reserved. Please complete the funding process in your portfolio to activate this investment.`);
       navigate("/investments/portfolio");
     } catch (err: any) {
@@ -135,6 +150,7 @@ export function InvestmentMarketplace() {
   };
 
   return (
+    <AccessGuard section="investments">
     <PageLayout 
       title="Commodity Investments" 
       subtitle="Institutional-grade managed commodity investment products for strategic capital allocation."
@@ -380,5 +396,6 @@ export function InvestmentMarketplace() {
         )}
       </div>
     </PageLayout>
+    </AccessGuard>
   );
 }

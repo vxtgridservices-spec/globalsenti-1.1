@@ -478,7 +478,7 @@ export function AdminInvestments() {
             .from('funding_submissions')
             .update({ 
                 status, 
-                verified_at: new Date().toISOString() 
+                verified_at: status === 'Verified' ? new Date().toISOString() : null 
             })
             .eq('id', submission.id);
           
@@ -519,6 +519,28 @@ export function AdminInvestments() {
                       status: 'Active'
                   });
               }
+          } else if (status === 'Rejected') {
+              // If funding is rejected, we should return the reserved units to available pool
+              // and cancel the subscription
+              await supabase
+                .from('investment_subscriptions')
+                .update({ status: 'Rejected' })
+                .eq('id', submission.subscription_id);
+
+              if (submission.subscription?.product_id && submission.subscription?.units) {
+                  const { data: prod } = await supabase
+                    .from('investment_products')
+                    .select('units_available')
+                    .eq('id', submission.subscription.product_id)
+                    .single();
+                  
+                  if (prod) {
+                      await supabase
+                        .from('investment_products')
+                        .update({ units_available: prod.units_available + submission.subscription.units })
+                        .eq('id', submission.subscription.product_id);
+                  }
+              }
           }
 
           alert(`Funding ${status.toLowerCase()} successfully.`);
@@ -547,7 +569,7 @@ export function AdminInvestments() {
         if (error) throw error;
 
         if (status === 'Completed') {
-            // Log redemption transaction
+            // 1. Log redemption transaction
             await supabase.from('investor_transactions').insert({
                 user_id: request.user_id,
                 position_id: request.position_id,
@@ -556,6 +578,22 @@ export function AdminInvestments() {
                 description: `Liquidity redemption completed for ${request.position?.product?.name}`,
                 metadata: { request_id: request.id }
             });
+
+            // 2. Return units to the product pool
+            if (request.position?.product_id && request.units) {
+                const { data: prod } = await supabase
+                    .from('investment_products')
+                    .select('units_available')
+                    .eq('id', request.position.product_id)
+                    .single();
+                
+                if (prod) {
+                    await supabase
+                        .from('investment_products')
+                        .update({ units_available: prod.units_available + request.units })
+                        .eq('id', request.position.product_id);
+                }
+            }
         }
 
         alert(`Redemption request updated to ${status}.`);
@@ -791,17 +829,6 @@ export function AdminInvestments() {
             .eq('id', sub.id);
         
         if (subUpdateError) throw subUpdateError;
-
-        // 2. Reduce Available Units in Product
-        if (sub.product) {
-            const newUnitsAvailable = sub.product.units_available - sub.units;
-            const { error: prodUpdateError } = await supabase
-                .from('investment_products')
-                .update({ units_available: newUnitsAvailable })
-                .eq('id', sub.product_id);
-            
-            if (prodUpdateError) throw prodUpdateError;
-        }
 
         // 3. Create Investor Position (Portfolio)
         const { error: posError } = await supabase

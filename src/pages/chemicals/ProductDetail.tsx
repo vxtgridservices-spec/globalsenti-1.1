@@ -306,7 +306,7 @@ export function ProductDetail() {
                         <div className="sticky top-28 p-8 border border-white/10 bg-white/5 backdrop-blur-3xl rounded-none space-y-8 shadow-2xl">
                             <div className="space-y-2">
                                 <p className="text-[10px] text-gray-500 uppercase tracking-[0.2em] font-bold">Standard Price Basis</p>
-                                <p className="text-4xl font-mono tracking-tighter text-white">${product.price_per_unit.toLocaleString(undefined, { minimumFractionDigits: 2 })}<span className="text-sm text-gray-600 ml-2 font-sans font-light capitalize">Per {product.unit_type}</span></p>
+                                <p className="text-2xl font-mono tracking-tighter text-white">${product.price_per_unit.toLocaleString(undefined, { minimumFractionDigits: 2 })}<span className="text-sm text-gray-600 ml-2 font-sans font-light capitalize">Per {product.unit_type}</span></p>
                             </div>
                             
                             <div className="p-6 bg-black/40 rounded-none space-y-4 border border-white/5">

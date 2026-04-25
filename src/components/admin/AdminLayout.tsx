@@ -8,6 +8,7 @@ import {
   FileText, 
   LogOut,
   Shield,
+  ShieldCheck,
   Menu,
   X,
   Loader2,
@@ -67,6 +68,7 @@ export function AdminLayout({ children, title, icon: Icon }: AdminLayoutProps) {
     { label: "Documents", icon: FileText, path: "/admin/documents" },
     { label: "Investments", icon: TrendingUp, path: "/admin/investments" },
     { label: "Chemicals", icon: FlaskConical, path: "/admin/chemicals" },
+    { label: "Security", icon: ShieldCheck, path: "/admin/security" },
   ];
 
   const handleLogout = async () => {

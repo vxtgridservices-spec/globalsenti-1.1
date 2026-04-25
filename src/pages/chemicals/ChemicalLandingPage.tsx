@@ -1,6 +1,7 @@
 import * as React from "react";
 import { Navbar } from "@/src/components/layout/Navbar";
 import { Footer } from "@/src/components/layout/Footer";
+import { AccessGuard } from "@/src/components/security/AccessGuard";
 import { Button } from "@/src/components/ui/button";
 import { supabase } from "@/src/lib/supabase";
 import { ChemicalProduct } from "@/src/types/chemicals";
@@ -94,6 +95,7 @@ export function ChemicalLandingPage() {
     };
 
     return (
+        <AccessGuard section="chemicals">
         <div className="min-h-screen bg-black text-white font-sans selection:bg-gold selection:text-black overflow-x-hidden">
             {(loading || !heroLoaded || !welcomeLoaded) && (
                 <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/90 backdrop-blur-xl text-white">
@@ -500,5 +502,6 @@ export function ChemicalLandingPage() {
                 )}
             </AnimatePresence>
         </div>
+        </AccessGuard>
     );
 }

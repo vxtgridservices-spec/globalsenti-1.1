@@ -236,7 +236,7 @@ export function ChemicalDashboard() {
                                             </div>
                                             <div className="text-left md:text-right">
                                                 <p className="text-[10px] text-gray-500 uppercase tracking-widest font-black">Total Value</p>
-                                                <p className="text-xl font-mono text-gold font-bold">${order.total_price.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                                                <p className="text-lg font-mono text-gold font-bold">${order.total_price.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
                                             </div>
                                         </div>
                                     </CardHeader>
@@ -542,7 +542,7 @@ export function ChemicalDashboard() {
                         </DialogTitle>
                         <DialogDescription className="text-gray-400 text-base">
                             Payment for Request ID: <span className="font-mono text-white">#{viewingPaymentFor?.id.split('-')[0].toUpperCase()}</span>. 
-                            Amount Due: <span className="text-gold font-bold text-xl ml-2">${viewingPaymentFor?.total_price.toLocaleString()}</span>
+                            Amount Due: <span className="text-gold font-bold text-lg ml-2">${viewingPaymentFor?.total_price.toLocaleString()}</span>
                         </DialogDescription>
                     </DialogHeader>
                     
