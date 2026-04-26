@@ -10,7 +10,7 @@ const logos = [
 
 export function LogoStrip() {
   return (
-    <div className="py-12 bg-background border-t border-white/5">
+    <div className="py-12 bg-background border-t border-white/5 w-full">
       <div className="container mx-auto px-4">
         <div className="flex flex-wrap justify-center items-center gap-12 md:gap-24 opacity-30 grayscale hover:grayscale-0 transition-all duration-500">
           {logos.map((logo) => (

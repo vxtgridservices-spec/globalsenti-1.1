@@ -1,5 +1,6 @@
+import { Link } from "react-router-dom";
 import { SectionHeader } from "@/src/components/ui/SectionHeader";
-import { Button } from "@/src/components/ui/button";
+import { Button, buttonVariants } from "@/src/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui/card";
 import { Shield, Truck, Gem, BarChart3, Factory, Globe, ArrowRight } from "lucide-react";
 import { motion } from "motion/react";
@@ -39,13 +40,13 @@ const services = [
 
 export function Services() {
   return (
-    <section className="py-24 bg-background border-t border-white/5">
+    <section className="py-24 bg-background border-t border-white/5 w-full">
       <div className="container mx-auto px-4">
         <div className="text-center mb-16">
           <h3 className="text-gold font-bold tracking-[0.3em] uppercase text-xs mb-4">OUR CORE SERVICES</h3>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-8 md:gap-12">
           {services.map((service, index) => (
             <motion.div
               key={service.title}
@@ -66,10 +67,10 @@ export function Services() {
                   {service.description}
                 </p>
               </div>
-              <Button variant="link" className="text-gold p-0 h-auto font-bold text-[9px] tracking-[0.2em] uppercase gap-2 hover:gap-4 transition-all">
+              <Link to={`/services/${service.title.toLowerCase().replace(/ & /g, '-').replace(/ /g, '-')}`} className={buttonVariants({ variant: "link" }) + " text-gold p-0 h-auto font-bold text-[9px] tracking-[0.2em] uppercase gap-2 hover:gap-4 transition-all"}>
                 LEARN MORE
                 <ArrowRight className="w-3 h-3" />
-              </Button>
+              </Link>
             </motion.div>
           ))}
         </div>

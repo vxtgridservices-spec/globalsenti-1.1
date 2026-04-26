@@ -15,7 +15,7 @@ const regions = [
 
 export function GlobalOperations() {
   return (
-    <section className="py-24 bg-background relative overflow-hidden">
+    <section className="py-24 bg-background relative overflow-hidden w-full">
       <div className="container mx-auto px-4">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center mb-24 min-h-[500px]">
           {/* Left Column: Vertically Centered Text */}

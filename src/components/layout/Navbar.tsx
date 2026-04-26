@@ -47,7 +47,7 @@ export function Navbar() {
       )}
     >
       <div className="container mx-auto px-4 flex items-center justify-between">
-        <div className="flex items-center gap-3 group cursor-pointer">
+        <div className="flex items-center gap-3 group cursor-pointer z-50">
           <div className="w-12 h-12 bg-gold rounded-full flex items-center justify-center transition-transform duration-500 group-hover:scale-110">
             <Shield className="text-background w-7 h-7" />
           </div>
@@ -62,9 +62,9 @@ export function Navbar() {
         </div>
 
         {/* Desktop Nav */}
-        <div className="hidden lg:flex items-center gap-8">
+        <div className="hidden lg:flex items-center gap-4 xl:gap-8 justify-center flex-1">
           <NavigationMenu>
-            <NavigationMenuList className="gap-1">
+            <NavigationMenuList className="gap-0.5 xl:gap-1">
               {navItems.map((item) => (
                 <NavigationMenuItem key={item.title}>
                   <NavigationMenuLink

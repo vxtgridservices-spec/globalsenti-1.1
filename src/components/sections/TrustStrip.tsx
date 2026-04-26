@@ -9,7 +9,7 @@ const trustItems = [
 
 export function TrustStrip() {
   return (
-    <div className="bg-gold py-8">
+    <div className="bg-gold py-8 w-full">
       <div className="container mx-auto px-4">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
           {trustItems.map((item) => (

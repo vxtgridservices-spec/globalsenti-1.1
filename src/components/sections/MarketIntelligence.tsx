@@ -7,7 +7,7 @@ import { Link } from "react-router-dom";
 
 export function MarketIntelligence() {
   return (
-    <section className="py-24 bg-secondary/5">
+    <section className="py-24 bg-secondary/5 w-full">
       <div className="container mx-auto px-4">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
           <div className="relative order-2 lg:order-1">

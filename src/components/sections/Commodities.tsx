@@ -29,23 +29,11 @@ const commodities = [
     image: "https://images.unsplash.com/photo-1542336391-ae2936d8efe4?auto=format&fit=crop&q=80&w=800",
     tag: "NATURAL GAS",
   },
-  {
-    name: "INDUSTRIAL MINERALS",
-    description: "Essential. Strategic. Durable.",
-    image: "https://images.unsplash.com/photo-1578328819058-b69f3a709475?auto=format&fit=crop&q=80&w=800",
-    tag: "INDUSTRIAL MINERALS",
-  },
-  {
-    name: "PRECIOUS STONES",
-    description: "Timeless. Beautiful. Rare.",
-    image: "https://images.unsplash.com/photo-1551334787-21e6bd3ab135?auto=format&fit=crop&q=80&w=800",
-    tag: "PRECIOUS STONES",
-  },
 ];
 
 export function Commodities() {
   return (
-    <section className="py-24 bg-secondary/10">
+    <section className="py-24 bg-secondary/10 w-full">
       <div className="container mx-auto px-4">
         <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-6">
           <SectionHeader
@@ -60,7 +48,7 @@ export function Commodities() {
           </Button>
         </div>
 
-        <div className="flex overflow-x-auto pb-8 gap-4 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-6 snap-x no-scrollbar">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {commodities.map((item, index) => (
             <motion.div
               key={item.name}
@@ -68,7 +56,7 @@ export function Commodities() {
               whileInView={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.5, delay: index * 0.1 }}
               viewport={{ once: true }}
-              className="group relative overflow-hidden rounded-xl aspect-[4/5] cursor-pointer min-w-[280px] md:min-w-0 snap-center"
+              className="group relative overflow-hidden rounded-xl aspect-[3/2] cursor-pointer"
             >
               <img
                 src={item.image}
