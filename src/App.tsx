@@ -49,6 +49,7 @@ import { ProductDetail } from "./pages/chemicals/ProductDetail";
 import { supabase } from "./lib/supabase";
 
 import { Toaster } from "sonner";
+import { News } from "./pages/News";
 import { TawktoLoader } from "./components/TawktoLoader";
 
 function TitleUpdater() {
@@ -188,6 +189,7 @@ export default function App() {
         <Route path="/chemicals/product/:id" element={<ProductDetail />} />
         <Route path="/chemicals/dashboard" element={<ChemicalDashboard />} />
         <Route path="/admin/chemicals" element={<AdminChemicals />} />
+        <Route path="/news" element={<News />} />
       </Routes>
     </Router>
   );

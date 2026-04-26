@@ -125,7 +125,7 @@ export function AdminConsultations() {
       if (!user) throw new Error("Not authenticated");
 
       const { data: defaultDeal } = await supabase.from('deals').select('id').limit(1).single();
-      const fallbackDealId = defaultDeal?.id || "DR-2024-001";
+      const fallbackDealId = defaultDeal?.id || "DR-2026-001";
       
       // We must have a buyer_id for the messages table constraint.
       // If the inquiry doesn't have one (e.g. anonymous submission), we try to find a profile by email
@@ -443,14 +443,15 @@ export function AdminConsultations() {
               </Button>
               
               <Button 
-                asChild
+                nativeButton={false}
+                render={
+                  <a href={`mailto:${selectedInquiry?.metadata?.email}?subject=GSG Follow-up: ${selectedInquiry?.metadata?.commodity}`}>
+                    <Mail className="w-4 h-4" /> EMAIL
+                  </a>
+                }
                 variant="outline"
                 className="border-blue-500/30 text-blue-400 hover:bg-blue-400/10 text-xs h-10 px-4 font-bold gap-2"
-              >
-                <a href={`mailto:${selectedInquiry?.metadata?.email}?subject=GSG Follow-up: ${selectedInquiry?.metadata?.commodity}`}>
-                  <Mail className="w-4 h-4" /> EMAIL
-                </a>
-              </Button>
+              />
 
               <Button 
                 onClick={handleSendReply}

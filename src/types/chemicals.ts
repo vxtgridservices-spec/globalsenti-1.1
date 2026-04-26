@@ -52,6 +52,14 @@ export interface ChemicalOrder {
   profile?: { email: string; full_name?: string };
 }
 
+export interface NewsArticle {
+  id: string;
+  title: string;
+  content: string;
+  image_url?: string;
+  created_at: string;
+}
+
 export interface ChemicalDocument {
   id: string;
   order_id: string;

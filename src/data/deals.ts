@@ -41,7 +41,7 @@ export interface Deal {
 
 export const deals: Deal[] = [
   {
-    id: "DR-2024-001",
+    id: "DR-2026-001",
     broker_id: "admin-system",
     type: "Gold",
     title: "AU Bullion - 500kg Spot",
@@ -83,7 +83,7 @@ export const deals: Deal[] = [
     }
   },
   {
-    id: "DR-2024-002",
+    id: "DR-2026-002",
     type: "Diamonds",
     title: "Rough Diamonds - 12,000 Carats",
     location: "Antwerp, Belgium",
@@ -124,7 +124,7 @@ export const deals: Deal[] = [
     }
   },
   {
-    id: "DR-2024-003",
+    id: "DR-2026-003",
     type: "Crude Oil",
     title: "Bonny Light Crude - 2M Barrels",
     location: "Offshore Nigeria",
@@ -165,7 +165,7 @@ export const deals: Deal[] = [
     }
   },
   {
-    id: "DR-2024-004",
+    id: "DR-2026-004",
     type: "Natural Gas",
     title: "LNG Supply - 50,000 MT",
     location: "Qatar",
@@ -205,7 +205,7 @@ export const deals: Deal[] = [
     }
   },
   {
-    id: "DR-2024-005",
+    id: "DR-2026-005",
     type: "Industrial Minerals",
     title: "Rare Earth Minerals - 5,000 MT",
     location: "Australia",
@@ -245,7 +245,7 @@ export const deals: Deal[] = [
     }
   },
   {
-    id: "DR-2024-006",
+    id: "DR-2026-006",
     type: "Precious Stones",
     title: "Mixed Gemstones - 8,000 Carats",
     location: "Sri Lanka",

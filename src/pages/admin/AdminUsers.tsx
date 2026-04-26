@@ -33,6 +33,7 @@ import {
 
 import { supabase } from "@/src/lib/supabase";
 import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 export function AdminUsers() {
   const [users, setUsers] = React.useState<any[]>([]);
@@ -89,8 +90,25 @@ export function AdminUsers() {
       
       if (error) throw error;
       setUsers(users.map(u => u.id === id ? { ...u, tier: newTier } : u));
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error updating user tier:", error);
+      toast.error("Failed to update tier: " + error.message);
+    }
+  };
+
+  const handleRoleUpdate = async (id: string, newRole: string) => {
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ role: newRole })
+        .eq('id', id);
+      
+      if (error) throw error;
+      setUsers(users.map(u => u.id === id ? { ...u, role: newRole } : u));
+      toast.success(`Role updated to ${newRole}`);
+    } catch (error: any) {
+      console.error("Error updating user role:", error);
+      toast.error("Failed to update role: " + error.message);
     }
   };
 
@@ -146,10 +164,20 @@ export function AdminUsers() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Shield className={`w-4 h-4 ${user.role === 'admin' ? 'text-red-400' : user.role === 'broker' ? 'text-gold' : 'text-blue-400'}`} />
-                          <span className="text-white text-sm capitalize">{user.role}</span>
-                        </div>
+                        <Select
+                          value={user.role || 'client'}
+                          onValueChange={(val) => handleRoleUpdate(user.id, val)}
+                        >
+                          <SelectTrigger className="w-[120px] bg-white/5 border-white/10 text-white h-8 text-xs capitalize">
+                            <Shield className={`w-3 h-3 mr-2 ${user.role === 'admin' ? 'text-red-400' : user.role === 'broker' ? 'text-gold' : 'text-blue-400'}`} />
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent className="bg-secondary border-white/10 text-white">
+                            <SelectItem value="client">Client</SelectItem>
+                            <SelectItem value="broker">Broker</SelectItem>
+                            <SelectItem value="admin">Admin</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </TableCell>
                       <TableCell>
                         <Select

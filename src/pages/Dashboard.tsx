@@ -282,7 +282,7 @@ export function Dashboard() {
       if (!targetRequestId) {
         // Fetch a default deal to satisfy the NOT NULL constraint if necessary
         const { data: defaultDeal } = await supabase.from('deals').select('id').limit(1).single();
-        const placeholderDealId = defaultDeal?.id || "DR-2024-001";
+        const placeholderDealId = defaultDeal?.id || "DR-2026-001";
 
         // Create a general inquiry request
         const { data: newReq, error: reqError } = await supabase
@@ -312,7 +312,7 @@ export function Dashboard() {
       // If we still don't have a deal_id (shouldn't happen with the logic above, but for safety)
       if (!targetDealId) {
         const { data: defaultDeal } = await supabase.from('deals').select('id').limit(1).single();
-        targetDealId = defaultDeal?.id || "DR-2024-001";
+        targetDealId = defaultDeal?.id || "DR-2026-001";
       }
 
       const { error } = await supabase

@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
 import { Textarea } from "@/src/components/ui/textarea";
+import { NewsArticle } from "@/src/types/chemicals";
 import { CheckCircle2, ArrowRight, Lock, Download, TrendingUp, Loader2 } from "lucide-react";
 import { motion } from "motion/react";
 import { Link } from "react-router-dom";
@@ -14,24 +15,6 @@ const whyChooseUs = [
   "Proven Track Record",
   "Expert Team & Global Network",
   "End-to-End Logistics Support",
-];
-
-const newsItems = [
-  {
-    title: "Global Demand for Critical Minerals Continues to Rise",
-    date: "May 7, 2024",
-    image: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&q=80&w=200",
-  },
-  {
-    title: "Oil Markets Outlook: Opportunities in Emerging Economies",
-    date: "April 28, 2024",
-    image: "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&q=80&w=200",
-  },
-  {
-    title: "Securing the Future: The Role of Strategic Partnerships",
-    date: "April 15, 2024",
-    image: "https://images.unsplash.com/photo-1526778548025-fa2f459cd5c1?auto=format&fit=crop&q=80&w=200",
-  },
 ];
 
 export function BottomGrid() {
@@ -58,7 +41,7 @@ export function BottomGrid() {
 
       // Fetch a fallback deal for schema compliance if required
       const { data: defaultDeal } = await supabase.from('deals').select('id').limit(1).single();
-      const fallbackDealId = defaultDeal?.id || "DR-2024-001";
+      const fallbackDealId = defaultDeal?.id || "DR-2026-001";
 
       const { error } = await supabase
         .from('requests')
@@ -99,6 +82,14 @@ export function BottomGrid() {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
+
+  const [news, setNews] = useState<NewsArticle[]>([]);
+
+  React.useEffect(() => {
+    supabase.from('chemical_news').select('*').order('created_at', { ascending: false }).limit(3).then(({ data }) => {
+        if (data) setNews(data);
+    });
+  }, []);
 
   return (
     <section className="py-24 bg-background border-t border-white/5 w-full">
@@ -163,20 +154,22 @@ export function BottomGrid() {
           <div className="space-y-8">
             <h3 className="text-gold font-bold tracking-[0.2em] uppercase text-xs">LATEST NEWS</h3>
             <div className="space-y-6">
-              {newsItems.map((item) => (
-                <div key={item.title} className="flex gap-4 group cursor-pointer">
-                  <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 border border-white/5">
-                    <img src={item.image} alt={item.title} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500" referrerPolicy="no-referrer" />
-                  </div>
+              {news.map((item) => (
+                <div key={item.id} className="flex gap-4 group cursor-pointer">
+                  {item.image_url && (
+                    <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 border border-white/5">
+                      <img src={item.image_url} alt={item.title} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500" referrerPolicy="no-referrer" />
+                    </div>
+                  )}
                   <div className="space-y-1">
                     <h4 className="text-white text-xs font-bold leading-tight group-hover:text-gold transition-colors line-clamp-2">
                       {item.title}
                     </h4>
-                    <p className="text-muted-foreground text-[10px] uppercase tracking-wider">{item.date}</p>
+                    <p className="text-muted-foreground text-[10px] uppercase tracking-wider">{new Date(item.created_at).toLocaleDateString()}</p>
                   </div>
                 </div>
               ))}
-              <Button nativeButton={false} variant="link" className="text-gold p-0 h-auto font-bold text-[10px] tracking-[0.2em] uppercase justify-start gap-3 hover:gap-5 transition-all" render={<Link to="/intelligence" />}>
+              <Button nativeButton={false} variant="link" className="text-gold p-0 h-auto font-bold text-[10px] tracking-[0.2em] uppercase justify-start gap-3 hover:gap-5 transition-all" render={<Link to="/news" />}>
                 VIEW ALL NEWS
                 <ArrowRight className="w-3.5 h-3.5" />
               </Button>

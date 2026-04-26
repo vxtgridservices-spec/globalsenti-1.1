@@ -16,10 +16,10 @@ import { Input } from "@/src/components/ui/input";
 
 export function AdminDocuments() {
   const documents = [
-    { name: "AU_Bullion_Manifest_2024.pdf", type: "Manifest", size: "2.4 MB", date: "2024-04-10", security: "Restricted" },
-    { name: "Diamond_Kimberley_Cert.pdf", type: "Certificate", size: "1.2 MB", date: "2024-04-08", security: "Confidential" },
-    { name: "BLCO_ATS_Verification.pdf", type: "Compliance", size: "0.5 MB", date: "2024-04-05", security: "Restricted" },
-    { name: "LNG_Master_Agreement.pdf", type: "Legal", size: "4.2 MB", date: "2024-04-01", security: "Top Secret" },
+    { name: "AU_Bullion_Manifest_2026.pdf", type: "Manifest", size: "2.4 MB", date: "2026-04-10", security: "Restricted" },
+    { name: "Diamond_Kimberley_Cert.pdf", type: "Certificate", size: "1.2 MB", date: "2026-04-08", security: "Confidential" },
+    { name: "BLCO_ATS_Verification.pdf", type: "Compliance", size: "0.5 MB", date: "2026-04-05", security: "Restricted" },
+    { name: "LNG_Master_Agreement.pdf", type: "Legal", size: "4.2 MB", date: "2026-04-01", security: "Top Secret" },
   ];
 
   return (

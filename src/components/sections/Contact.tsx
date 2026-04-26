@@ -48,7 +48,7 @@ export function Contact() {
 
       // Fetch a fallback deal for schema compliance if required
       const { data: defaultDeal } = await supabase.from('deals').select('id').limit(1).single();
-      const fallbackDealId = defaultDeal?.id || "DR-2024-001";
+      const fallbackDealId = defaultDeal?.id || "DR-2026-001";
 
       const { error } = await supabase
         .from('requests')

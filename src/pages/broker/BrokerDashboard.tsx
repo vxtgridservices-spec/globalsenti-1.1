@@ -173,7 +173,7 @@ export function BrokerDashboard() {
                     <ShieldCheck className="w-4 h-4 text-green-500" />
                     <p className="text-sm text-white font-bold">Verification Active</p>
                   </div>
-                  <p className="text-xs text-gray-400">Your broker credentials are verified until Dec 2024. Next audit in 182 days.</p>
+                  <p className="text-xs text-gray-400">Your broker credentials are verified until Dec 2026. Next audit in 182 days.</p>
                 </div>
                 <div className="space-y-2">
                   <div className="flex justify-between text-xs">

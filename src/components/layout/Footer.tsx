@@ -115,7 +115,7 @@ export function Footer() {
 
         <div className="pt-12 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-6">
           <p className="text-muted-foreground text-[10px] uppercase tracking-widest">
-            © 2024 Global Sentinel Group. All Rights Reserved.
+            © 2026 Global Sentinel Group. All Rights Reserved.
           </p>
           <div className="flex gap-8">
             <a href="#" className="text-muted-foreground hover:text-gold text-[10px] uppercase tracking-widest transition-colors">Privacy Policy</a>

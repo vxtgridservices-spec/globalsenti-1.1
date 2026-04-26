@@ -111,7 +111,7 @@ export function DealRoom() {
           // Seed data if empty
           const seedDeals = [
             {
-              id: "DR-2024-001",
+              id: "DR-2026-001",
               type: "Gold",
               title: "AU Bullion - 500kg Spot",
               location: "Dubai, UAE",
@@ -125,7 +125,7 @@ export function DealRoom() {
               created_at: new Date().toISOString()
             },
             {
-              id: "DR-2024-002",
+              id: "DR-2026-002",
               type: "Diamonds",
               title: "Rough Diamonds - 12,000 Carats",
               location: "Antwerp, Belgium",
@@ -139,7 +139,7 @@ export function DealRoom() {
               created_at: new Date().toISOString()
             },
             {
-              id: "DR-2024-003",
+              id: "DR-2026-003",
               type: "Crude Oil",
               title: "Bonny Light Crude - 2M Barrels",
               location: "Nigeria",
@@ -153,7 +153,7 @@ export function DealRoom() {
               created_at: new Date().toISOString()
             },
             {
-              id: "DR-2024-004",
+              id: "DR-2026-004",
               type: "Natural Gas",
               title: "LNG Supply - 50,000 MT",
               location: "Qatar",
@@ -165,7 +165,7 @@ export function DealRoom() {
               created_at: new Date().toISOString()
             },
             {
-              id: "DR-2024-005",
+              id: "DR-2026-005",
               type: "Industrial Minerals",
               title: "Rare Earth Minerals - 5,000 MT",
               location: "Australia",
@@ -177,7 +177,7 @@ export function DealRoom() {
               created_at: new Date().toISOString()
             },
             {
-              id: "DR-2024-006",
+              id: "DR-2026-006",
               type: "Precious Stones",
               title: "Mixed Gemstones - 8,000 Carats",
               location: "Sri Lanka",

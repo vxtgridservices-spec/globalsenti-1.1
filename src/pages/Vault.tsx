@@ -29,12 +29,12 @@ interface VaultDocument {
 }
 
 const INITIAL_DOCS: VaultDocument[] = [
-  { id: '1', name: "Corporate Compliance Framework 2024", type: "PDF", size: "2.4 MB", category: "Compliance", date: "Jan 12, 2024", status: 'active' },
-  { id: '2', name: "Global Security Protocols & Standards", type: "PDF", size: "5.1 MB", category: "Security", date: "Feb 05, 2024", status: 'active' },
+  { id: '1', name: "Corporate Compliance Framework 2026", type: "PDF", size: "2.4 MB", category: "Compliance", date: "Jan 12, 2026", status: 'active' },
+  { id: '2', name: "Global Security Protocols & Standards", type: "PDF", size: "5.1 MB", category: "Security", date: "Feb 05, 2026", status: 'active' },
   { id: '3', name: "Commodity Trading License - UAE", type: "PDF", size: "1.2 MB", category: "Legal", date: "Dec 20, 2023", status: 'active' },
-  { id: '4', name: "Anti-Money Laundering (AML) Policy", type: "PDF", size: "3.8 MB", category: "Compliance", date: "Mar 15, 2024", status: 'active' },
+  { id: '4', name: "Anti-Money Laundering (AML) Policy", type: "PDF", size: "3.8 MB", category: "Compliance", date: "Mar 15, 2026", status: 'active' },
   { id: '5', name: "Logistics & Supply Chain Insurance", type: "PDF", size: "4.5 MB", category: "Insurance", date: "Nov 30, 2023", status: 'active' },
-  { id: '6', name: "Corporate Brochure - Premium Edition", type: "PDF", size: "12.4 MB", category: "Corporate", date: "Apr 01, 2024", status: 'active' },
+  { id: '6', name: "Corporate Brochure - Premium Edition", type: "PDF", size: "12.4 MB", category: "Corporate", date: "Apr 01, 2026", status: 'active' },
 ];
 
 export function Vault() {
@@ -121,7 +121,7 @@ export function Vault() {
     if (name.includes("Anti-Money Laundering")) {
       contentText = `ANTI-MONEY LAUNDERING (AML) POLICY & FRAMEWORK\n\n1. SCOPE AND PURPOSE\nGlobal Sentinel Group (GSG) is committed strictly to preventing the use of its operations for money\nlaundering or terrorist financing. This document outlines the protocols compliant with international\nFATF recommendations.\n\n2. CUSTOMER DUE DILIGENCE (CDD)\nAll counterparties must undergo rigorous Know Your Customer (KYC) screening prior to any\nfinancial transaction or physical commodity transfer. Enhanced Due Diligence (EDD) is mandated\nfor high-risk jurisdictions.\n\n3. REPORTING OF SUSPICIOUS TRANSACTIONS\nEmployees and affiliates are legally bound to report any suspicious trading activity, irregularities in\nfund origins, or opaque beneficial ownership structures to the Chief Compliance Officer.`;
     } else if (name.includes("Compliance Framework")) {
-      contentText = `CORPORATE COMPLIANCE FRAMEWORK 2024\n\n1. REGULATORY ADHERENCE\nAll operations pertaining to strategic resource acquisition, logistics, and private security must align\nwith extraterritorial regulations including the FCPA and UK Bribery Act.\n\n2. AUDIT & REPORTING\nInternal audits are conducted quarterly on all supply chain nodes. Discrepancies exceeding 0.1%\nin physical inventory vs. ledger records mandate an immediate operational freeze and investigation.\n\n3. CODE OF CONDUCT\nIntegrity and precision are non-negotiable. GSG personnel are expected to maintain the highest\nstandard of discretion and professional ethics in all global deployments.`;
+      contentText = `CORPORATE COMPLIANCE FRAMEWORK 2026\n\n1. REGULATORY ADHERENCE\nAll operations pertaining to strategic resource acquisition, logistics, and private security must align\nwith extraterritorial regulations including the FCPA and UK Bribery Act.\n\n2. AUDIT & REPORTING\nInternal audits are conducted quarterly on all supply chain nodes. Discrepancies exceeding 0.1%\nin physical inventory vs. ledger records mandate an immediate operational freeze and investigation.\n\n3. CODE OF CONDUCT\nIntegrity and precision are non-negotiable. GSG personnel are expected to maintain the highest\nstandard of discretion and professional ethics in all global deployments.`;
     } else if (name.includes("Security Protocols")) {
       contentText = `GLOBAL SECURITY PROTOCOLS & STANDARDS\n\n1. THREAT LEVEL ASSESSMENT\nAll logistics routes are continuously monitored by our global intelligence division. Assets in transit\nare escorted by armed personnel where legally permissible and necessary.\n\n2. ASSET SAFEGUARDING\nPhysical vaults utilize multi-factor biometric access, 24/7 seismic monitoring, and constant\narmed overwatch. Transit vehicles are armored to STANAG Level IV.\n\n3. BREACH RESPONSE\nIn the event of a security breach, "Protocol Omega" is initiated, securing all nodes locally while\nthe tactical response team is deployed. Local authorities are engaged per host-nation agreements.`;
     } else if (name.includes("License")) {

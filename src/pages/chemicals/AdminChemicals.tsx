@@ -6,11 +6,11 @@ import { Input } from "@/src/components/ui/input";
 import { Label } from "@/src/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/src/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/src/components/ui/table";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/src/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/src/components/ui/dialog";
 import { Textarea } from "@/src/components/ui/textarea";
 import { supabase } from "@/src/lib/supabase";
 import { toast } from "sonner";
-import { ChemicalProduct, ChemicalOrder, ChemicalDocument } from "@/src/types/chemicals";
+import { ChemicalProduct, ChemicalOrder, ChemicalDocument, NewsArticle } from "@/src/types/chemicals";
 import { Loader2, PackagePlus, FileText, CheckCircle, Database, FlaskConical, Copy, Check, FileDown, ShieldCheck, X, Image as ImageIcon } from "lucide-react";
 import { generateChemicalDocument } from "@/src/services/chemicalPdfService";
 import { RichTextEditor } from "@/src/components/ui/RichTextEditor";
@@ -120,6 +120,18 @@ CREATE TABLE IF NOT EXISTS public.chemical_documents (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS public.chemical_news (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    title TEXT NOT NULL,
+    content TEXT NOT NULL,
+    image_url TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+ALTER TABLE public.chemical_news ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public View News" ON public.chemical_news FOR SELECT USING (true);
+CREATE POLICY "Admin Manage News" ON public.chemical_news FOR ALL USING (true);
+
 -- 2. Security (RLS)
 ALTER TABLE public.chemical_products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.chemical_orders ENABLE ROW LEVEL SECURITY;
@@ -173,10 +185,11 @@ CREATE POLICY "Admin Manage Docs" ON public.chemical_documents FOR ALL USING (tr
 export function AdminChemicals() {
     const [products, setProducts] = React.useState<ChemicalProduct[]>([]);
     const [orders, setOrders] = React.useState<ChemicalOrder[]>([]);
+    const [news, setNews] = React.useState<NewsArticle[]>([]);
     const [loading, setLoading] = React.useState(true);
     
     // UI State
-    const [activeTab, setActiveTab] = React.useState<'orders'|'products'|'cms'|'settings'>('orders');
+    const [activeTab, setActiveTab] = React.useState<'orders'|'products'|'cms'|'settings'|'news'>('orders');
     
     // Site Settings State
     const [siteSettings, setSiteSettings] = React.useState<any>({});
@@ -192,10 +205,14 @@ export function AdminChemicals() {
     const [paymentInstructions, setPaymentInstructions] = React.useState("");
     const [copied, setCopied] = React.useState(false);
     const [viewingProofHash, setViewingProofHash] = React.useState<string | null>(null);
+    const [isNewsDialogOpen, setIsNewsDialogOpen] = React.useState(false);
+    const [editingNews, setEditingNews] = React.useState<any>(null);
     
     // Settlement Detail States
     const [bankDetails, setBankDetails] = React.useState({ bankName: "", accountNumber: "", routingNumber: "", beneficiary: "GLOBAL SENTINEL GROUP" });
     const [cryptoDetails, setCryptoDetails] = React.useState({ address: "", network: "" });
+
+    const [schemaError, setSchemaError] = React.useState<string | null>(null);
 
     React.useEffect(() => {
         fetchData();
@@ -203,17 +220,32 @@ export function AdminChemicals() {
 
     const fetchData = async () => {
         setLoading(true);
+        setSchemaError(null);
         console.log("Fetching Chemical Operations Data...");
         try {
-            const [pRes, oRes, sRes] = await Promise.all([
+            const [pRes, oRes, sRes, newsRes] = await Promise.all([
                 supabase.from('chemical_products').select('*').order('created_at', { ascending: false }),
                 supabase.from('chemical_orders').select(`
                     *,
                     product:chemical_products(*),
                     profile:profiles(id, full_name, email)
                 `).order('created_at', { ascending: false }),
-                supabase.from('site_settings').select('*')
+                supabase.from('site_settings').select('*'),
+                supabase.from('chemical_news').select('*').order('created_at', { ascending: false })
             ]);
+            
+            // Check for schema errors
+            const errors = [pRes.error, oRes.error, sRes.error, newsRes.error].filter(Boolean);
+            const missingTableError = errors.find(e => e?.message?.includes('schema cache') || e?.code === 'PGRST204' || e?.code === '42P01');
+            
+            if (missingTableError) {
+                console.error("Schema error detected:", missingTableError);
+                setSchemaError(`Database tables are not fully synced. Please run the SQL initialization script.`);
+            }
+
+            if (newsRes.data) {
+                setNews(newsRes.data);
+            }
             
             if (sRes.data) {
                 const settingsMap = new Map(sRes.data.map(s => [s.key, s.value]));
@@ -404,6 +436,25 @@ export function AdminChemicals() {
 
     return (
         <AdminLayout title="Chemical Operations" icon={FlaskConical}>
+            {schemaError && (
+                <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <Database className="w-5 h-5 text-red-500" />
+                        <div>
+                            <p className="text-red-500 font-bold text-sm">Database Sync Required</p>
+                            <p className="text-red-400/80 text-xs">Some tables (including 'chemical_news') are missing. Copy the Sync SQL and run it in your Supabase SQL Editor.</p>
+                        </div>
+                    </div>
+                    <Button 
+                        size="sm" 
+                        onClick={handleCopySQL}
+                        className="bg-red-500 hover:bg-red-600 text-white text-xs font-bold px-4"
+                    >
+                        {copied ? 'Copied!' : 'Copy SQL Now'}
+                    </Button>
+                </div>
+            )}
+
             <div className="flex gap-4 mb-8">
                 <Button 
                     variant={activeTab === 'orders' ? 'default' : 'outline'}
@@ -428,6 +479,14 @@ export function AdminChemicals() {
                     className={activeTab === 'cms' ? 'bg-gold hover:bg-gold/90 text-black' : 'border-white/10 text-white'}
                 >
                     Chemical CMS
+                </Button>
+                <Button 
+                    variant={activeTab === 'news' ? 'default' : 'outline'}
+                    onClick={() => setActiveTab('news')}
+                    disabled={loading}
+                    className={activeTab === 'news' ? 'bg-gold hover:bg-gold/90 text-black' : 'border-white/10 text-white'}
+                >
+                    News Management
                 </Button>
                 <Button 
                     variant={activeTab === 'settings' ? 'default' : 'outline'}
@@ -794,6 +853,122 @@ export function AdminChemicals() {
                         </Card>
                     </div>
                 </div>
+            ) : activeTab === 'news' ? (
+                <Card className="bg-[#0A0A0A] border-white/5">
+                    <CardHeader className="flex flex-row items-center justify-between border-b border-white/5 pb-4">
+                        <div>
+                            <CardTitle className="text-white">Live News Management</CardTitle>
+                            <p className="text-xs text-muted-foreground mt-1">Publish updates to the public news feed.</p>
+                        </div>
+                        <Dialog open={isNewsDialogOpen} onOpenChange={(open) => {
+                            setIsNewsDialogOpen(open);
+                            if (!open) setEditingNews(null);
+                        }}>
+                            <DialogTrigger
+                                render={
+                                    <Button onClick={() => setEditingNews(null)} className="bg-gold text-black hover:bg-gold/90 h-10 text-xs font-bold uppercase tracking-widest px-6 shadow-lg shadow-gold/10">
+                                        + Post New Article
+                                    </Button>
+                                }
+                            />
+                            <DialogContent className="bg-black border border-white/10 text-white shadow-2xl max-w-2xl">
+                                <DialogHeader>
+                                    <DialogTitle className="text-gold font-serif">{editingNews ? 'Edit News Update' : 'Create News Update'}</DialogTitle>
+                                </DialogHeader>
+                                <form onSubmit={(e) => {
+                                    e.preventDefault();
+                                    const formData = new FormData(e.currentTarget);
+                                    const title = formData.get('title') as string;
+                                    const content = formData.get('content') as string;
+                                    const image_url = formData.get('image_url') as string;
+
+                                    if (title && content) {
+                                        if (editingNews) {
+                                            supabase.from('chemical_news').update({ title, content, image_url }).eq('id', editingNews.id).then(({ error }) => {
+                                                if (error) {
+                                                    toast.error("Failed to update news: " + error.message);
+                                                } else {
+                                                    toast.success("News update updated successfully!");
+                                                    fetchData();
+                                                    setIsNewsDialogOpen(false);
+                                                    setEditingNews(null);
+                                                }
+                                            });
+                                        } else {
+                                            supabase.from('chemical_news').insert({ title, content, image_url }).then(({ error }) => {
+                                                if (error) {
+                                                    const isSchemaError = error.message?.includes('schema cache') || error.code === '42P01' || error.code === 'PGRST204';
+                                                    toast.error(`Failed to post news: ${error.message}${isSchemaError ? ". Table 'chemical_news' is missing. Please sync SQL." : ""}`);
+                                                } else {
+                                                    toast.success("News update published successfully!");
+                                                    fetchData();
+                                                    setIsNewsDialogOpen(false);
+                                                }
+                                            });
+                                        }
+                                    }
+                                }} className="space-y-4 py-4">
+                                    <div className="space-y-2">
+                                        <Label>Article Title</Label>
+                                        <Input name="title" defaultValue={editingNews?.title} required placeholder="Major Supply Chain Update..." className="bg-white/5 border-white/10" />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label>Lead Image URL (Optional)</Label>
+                                        <Input name="image_url" defaultValue={editingNews?.image_url} placeholder="https://images.unsplash.com/..." className="bg-white/5 border-white/10" />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label>Content</Label>
+                                        <Textarea name="content" defaultValue={editingNews?.content} required placeholder="Enter full news content here..." className="bg-white/5 border-white/10 min-h-[200px]" />
+                                    </div>
+                                    <Button type="submit" className="w-full bg-gold text-black font-bold uppercase tracking-widest">
+                                        {editingNews ? 'Save Changes' : 'Publish To Feed'}
+                                    </Button>
+                                </form>
+                            </DialogContent>
+                        </Dialog>
+                    </CardHeader>
+                    <CardContent>
+                        <Table>
+                            <TableHeader>
+                                <TableRow className="border-white/10">
+                                    <TableHead className="text-gray-400">Title</TableHead>
+                                    <TableHead className="text-gray-400">Content</TableHead>
+                                    <TableHead className="text-gray-400">Date</TableHead>
+                                    <TableHead className="text-right text-gray-400">Actions</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                            {news.map(n => (
+                                <TableRow key={n.id} className="border-white/5">
+                                    <TableCell className="font-medium text-white">{n.title}</TableCell>
+                                    <TableCell className="text-gray-400 truncate max-w-xs">{n.content}</TableCell>
+                                    <TableCell className="text-gray-500 text-xs font-mono">{new Date(n.created_at).toLocaleDateString()}</TableCell>
+                                    <TableCell className="text-right">
+                                        <div className="flex justify-end gap-2">
+                                            <Button variant="ghost" size="sm" onClick={() => {
+                                                setEditingNews(n);
+                                                setIsNewsDialogOpen(true);
+                                            }}>
+                                                <ShieldCheck className="w-4 h-4 text-blue-400" />
+                                            </Button>
+                                            <Button variant="ghost" size="sm" onClick={() => {
+                                                if (confirm("Delete article?")) {
+                                                    supabase.from('chemical_news').delete().eq('id', n.id).then(() => {
+                                                        toast.success("Deleted");
+                                                        fetchData();
+                                                    });
+                                                }
+                                            }}>
+                                                <X className="w-4 h-4 text-red-500" />
+                                            </Button>
+                                        </div>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                            </TableBody>
+                        </Table>
+                    </CardContent>
+                </Card>
             ) : activeTab === 'settings' ? (
                 <div className="space-y-6">
                     <div className="grid md:grid-cols-2 gap-6">
@@ -893,18 +1068,56 @@ export function AdminChemicals() {
                                                     </SelectContent>
                                                 </Select>
                                                 {o.shipping_info && (() => {
-                                                    const s = typeof o.shipping_info === 'string' ? JSON.parse(o.shipping_info as any) : o.shipping_info;
+                                                    let s: any = null;
+                                                    try {
+                                                        s = typeof o.shipping_info === 'string' ? JSON.parse(o.shipping_info) : o.shipping_info;
+                                                    } catch (e) {
+                                                        console.error("Failed to parse shipping_info", e);
+                                                        return <span className="text-[10px] text-red-500">Parsing Error</span>;
+                                                    }
+                                                    
+                                                    if (!s) return null;
+                                                    
                                                     return (
-                                                    <div className="mt-1 relative group w-fit">
-                                                        <span className="text-[10px] text-orange-400 bg-orange-400/10 px-2 py-0.5 rounded cursor-pointer hover:bg-orange-400/20">
-                                                            View Shipping Info
-                                                        </span>
-                                                        <div className="hidden group-hover:block absolute top-full left-0 z-50 mt-2 rounded bg-black border border-white/10 px-3 py-2 text-xs text-white min-w-[250px] text-left shadow-xl">
-                                                            <p className="font-bold text-gold">Contact: {s.contactName} ({s.contactPhone})</p>
-                                                            <p>{s.address}, {s.city}</p>
-                                                            <p>{s.zip} {s.country}</p>
-                                                            {s.notes && <p className="italic text-gray-400 mt-1">Notes: {s.notes}</p>}
-                                                        </div>
+                                                    <div className="mt-1 relative w-fit">
+                                                        <Dialog>
+                                                            <DialogTrigger
+                                                                nativeButton={false}
+                                                                render={
+                                                                    <span className="text-[10px] text-orange-400 bg-orange-400/10 px-2 py-0.5 rounded cursor-pointer hover:bg-orange-400/20">
+                                                                        View Shipping Info
+                                                                    </span>
+                                                                }
+                                                            />
+                                                            <DialogContent className="bg-black border border-white/10 text-white min-w-[300px] shadow-2xl">
+                                                                <DialogHeader>
+                                                                    <DialogTitle className="text-gold font-serif">Order Logistics Detail</DialogTitle>
+                                                                </DialogHeader>
+                                                                <div className="text-sm space-y-3 py-4">
+                                                                    <div className="grid grid-cols-2 gap-4">
+                                                                        <div>
+                                                                            <p className="text-[10px] text-gray-500 uppercase font-bold tracking-widest">Recipient</p>
+                                                                            <p className="font-medium">{s.contactName || 'N/A'}</p>
+                                                                        </div>
+                                                                        <div>
+                                                                            <p className="text-[10px] text-gray-500 uppercase font-bold tracking-widest">Contact</p>
+                                                                            <p className="font-medium">{s.contactPhone || 'N/A'}</p>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div>
+                                                                        <p className="text-[10px] text-gray-500 uppercase font-bold tracking-widest">Address</p>
+                                                                        <p className="font-medium">{s.address || 'N/A'}</p>
+                                                                        <p className="font-medium">{s.city ? `${s.city}, ` : ''}{s.zip || ''} {s.country || ''}</p>
+                                                                    </div>
+                                                                    {s.notes && (
+                                                                        <div className="p-2 bg-white/5 rounded border border-white/10">
+                                                                            <p className="text-[10px] text-gray-500 uppercase font-bold tracking-widest mb-1">Shipping Notes</p>
+                                                                            <p className="text-xs italic text-gray-300">"{s.notes}"</p>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            </DialogContent>
+                                                        </Dialog>
                                                     </div>
                                                     );
                                                 })()}
