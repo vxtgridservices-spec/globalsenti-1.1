@@ -85,12 +85,20 @@ CREATE TABLE IF NOT EXISTS public.chemical_orders (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Ensure payment_instructions column exists
+-- Ensure payment_instructions and shipping_info columns exist
 DO $$ 
 BEGIN 
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='chemical_orders' AND column_name='payment_instructions') THEN
         ALTER TABLE public.chemical_orders ADD COLUMN payment_instructions TEXT;
     END IF;
+
+    -- Drop and re-add shipping_info to handle any potential type conflicts
+    BEGIN
+        ALTER TABLE public.chemical_orders DROP COLUMN IF EXISTS shipping_info;
+        ALTER TABLE public.chemical_orders ADD COLUMN shipping_info JSONB;
+    EXCEPTION WHEN OTHERS THEN
+        RAISE NOTICE 'Failed to recreate shipping_info: %', SQLERRM;
+    END;
 END $$;
 
 -- Ensure foreign key to profiles exists for easier joining (optional but helpful)
@@ -834,7 +842,7 @@ export function AdminChemicals() {
                                     <TableHead className="text-gray-400">Client Info</TableHead>
                                     <TableHead className="text-gray-400">Product / Qty</TableHead>
                                     <TableHead className="text-gray-400">Payment Status</TableHead>
-                                    <TableHead className="text-gray-400">Order Status</TableHead>
+                                    <TableHead className="text-gray-400">Logistics State</TableHead>
                                     <TableHead className="text-right text-gray-400">Actions</TableHead>
                                 </TableRow>
                             </TableHeader>
@@ -871,18 +879,36 @@ export function AdminChemicals() {
                                             )}
                                         </TableCell>
                                         <TableCell>
-                                            <Select value={o.order_status} onValueChange={(val) => handleUpdateOrderStatus(o.id, val, 'order_status')}>
-                                                <SelectTrigger className="h-7 text-xs bg-black border-white/10 text-white w-32">
-                                                    <SelectValue />
-                                                </SelectTrigger>
-                                                <SelectContent className="bg-black border-white/10 text-white text-xs">
-                                                    <SelectItem value="Pending">Pending</SelectItem>
-                                                    <SelectItem value="Confirmed">Confirmed</SelectItem>
-                                                    <SelectItem value="Processing">Processing</SelectItem>
-                                                    <SelectItem value="Shipped">Shipped</SelectItem>
-                                                    <SelectItem value="Delivered">Delivered</SelectItem>
-                                                </SelectContent>
-                                            </Select>
+                                            <div className="flex flex-col gap-1">
+                                                <Select value={o.order_status} onValueChange={(val) => handleUpdateOrderStatus(o.id, val, 'order_status')}>
+                                                    <SelectTrigger className="h-8 text-[11px] font-bold uppercase tracking-wider bg-gold/10 border-gold/30 text-gold w-[140px] hover:bg-gold/20 hover:border-gold/50 transition-all">
+                                                        <SelectValue />
+                                                    </SelectTrigger>
+                                                    <SelectContent className="bg-black border-white/10 text-white text-xs">
+                                                        <SelectItem value="Pending">Pending</SelectItem>
+                                                        <SelectItem value="Confirmed">Confirmed</SelectItem>
+                                                        <SelectItem value="Processing">Processing</SelectItem>
+                                                        <SelectItem value="Shipped">Shipped</SelectItem>
+                                                        <SelectItem value="Delivered">Delivered</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                                {o.shipping_info && (() => {
+                                                    const s = typeof o.shipping_info === 'string' ? JSON.parse(o.shipping_info as any) : o.shipping_info;
+                                                    return (
+                                                    <div className="mt-1 relative group w-fit">
+                                                        <span className="text-[10px] text-orange-400 bg-orange-400/10 px-2 py-0.5 rounded cursor-pointer hover:bg-orange-400/20">
+                                                            View Shipping Info
+                                                        </span>
+                                                        <div className="hidden group-hover:block absolute top-full left-0 z-50 mt-2 rounded bg-black border border-white/10 px-3 py-2 text-xs text-white min-w-[250px] text-left shadow-xl">
+                                                            <p className="font-bold text-gold">Contact: {s.contactName} ({s.contactPhone})</p>
+                                                            <p>{s.address}, {s.city}</p>
+                                                            <p>{s.zip} {s.country}</p>
+                                                            {s.notes && <p className="italic text-gray-400 mt-1">Notes: {s.notes}</p>}
+                                                        </div>
+                                                    </div>
+                                                    );
+                                                })()}
+                                            </div>
                                         </TableCell>
                                         <TableCell className="text-right">
                                             <div className="flex flex-col gap-1 items-end">

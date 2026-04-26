@@ -10,7 +10,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     autoRefreshToken: true,
     detectSessionInUrl: true,
     // Disable the use of Navigator Lock API if it's causing issues in this environment
-    // Use a custom lock implementation or set it to null to avoid the "stolen lock" errors
+    lock: null,
     storageKey: 'sentinel-secure-session-v1'
   }
 });

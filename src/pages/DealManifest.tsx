@@ -589,7 +589,17 @@ export function DealManifest() {
                 {dealData.documents.map((doc, i) => (
                   <div 
                     key={i} 
-                    className="flex items-center justify-between p-4 bg-white/5 border border-white/10 rounded-xl hover:border-gold/30 transition-all group"
+                    className="flex items-center justify-between p-4 bg-white/5 border border-white/10 rounded-xl hover:border-gold/30 transition-all group cursor-pointer"
+                    onClick={() => {
+                        const link = document.createElement('a');
+                        // Creating a dummy file to represent the download since we don't have real files
+                        const blob = new Blob(["This is a securely encrypted placeholder for: " + doc.name], { type: "text/plain" });
+                        link.href = URL.createObjectURL(blob);
+                        link.download = doc.name;
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                    }}
                   >
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-lg bg-gold/10 flex items-center justify-center">

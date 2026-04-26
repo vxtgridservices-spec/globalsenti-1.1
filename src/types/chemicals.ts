@@ -24,6 +24,16 @@ export interface ChemicalReview {
   created_at?: string;
 }
 
+export interface ShippingInfo {
+  address: string;
+  city: string;
+  zip: string;
+  country: string;
+  contactName: string;
+  contactPhone: string;
+  notes?: string;
+}
+
 export interface ChemicalOrder {
   id: string;
   user_id: string;
@@ -35,6 +45,7 @@ export interface ChemicalOrder {
   order_status: 'Pending' | 'Confirmed' | 'Processing' | 'Shipped' | 'Delivered' | 'Cancelled';
   payment_proof_hash?: string;
   payment_instructions?: string;
+  shipping_info?: ShippingInfo;
   created_at?: string;
   updated_at?: string;
   product?: ChemicalProduct;

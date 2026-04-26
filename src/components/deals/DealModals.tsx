@@ -43,6 +43,8 @@ interface ModalProps {
 export function PurchaseRequestModal({ isOpen, onClose, deal }: ModalProps) {
   const [loading, setLoading] = React.useState(false);
   const [submitted, setSubmitted] = React.useState(false);
+  const [pofFile, setPofFile] = React.useState<File | null>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [formData, setFormData] = React.useState({
     name: "",
     company: "",
@@ -215,12 +217,26 @@ export function PurchaseRequestModal({ isOpen, onClose, deal }: ModalProps) {
                 Proof of Funds (POF)
               </Label>
               <div className="flex items-center gap-2">
+                <input 
+                  type="file" 
+                  ref={fileInputRef}
+                  className="hidden"
+                  onChange={(e) => {
+                    const files = e.target.files;
+                    if (files && files.length > 0) {
+                      setPofFile(files[0]);
+                    }
+                  }}
+                  accept=".pdf,.doc,.docx,.jpg,.png"
+                />
                 <Button
                   type="button"
                   variant="outline"
-                  className="w-full border-dashed border-white/20 bg-white/5 text-gray-400 hover:text-white gap-2"
+                  onClick={() => fileInputRef.current?.click()}
+                  className={`w-full border-dashed ${pofFile ? 'border-green-500/50 text-green-400 bg-green-500/10' : 'border-white/20 bg-white/5 text-gray-400'} hover:text-white gap-2`}
                 >
-                  <FileUp className="w-4 h-4" /> Upload Document
+                  <FileUp className="w-4 h-4" /> 
+                  {pofFile ? pofFile.name : 'Upload Document'}
                 </Button>
               </div>
             </div>

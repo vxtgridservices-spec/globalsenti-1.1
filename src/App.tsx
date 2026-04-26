@@ -34,6 +34,8 @@ import { Partnerships } from "./pages/Partnerships";
 import { Contact } from "./pages/Contact";
 import { InvestmentMarketplace } from "./pages/investments/InvestmentMarketplace";
 import { InvestmentPortfolio } from "./pages/investments/InvestmentPortfolio";
+import { AllPositions } from "./pages/investments/AllPositions";
+import { TransactionsHistory } from "./pages/investments/TransactionsHistory";
 import { LedgerVerification } from "./pages/investments/LedgerVerification";
 import { AdminInvestments } from "./pages/admin/AdminInvestments";
 import { AdminSecurity } from "./pages/admin/AdminSecurity";
@@ -174,6 +176,8 @@ export default function App() {
         <Route path="/vault" element={<Vault />} />
         <Route path="/investments" element={<InvestmentMarketplace />} />
         <Route path="/investments/portfolio" element={<InvestmentPortfolio />} />
+        <Route path="/positions" element={<AllPositions />} />
+        <Route path="/transactions" element={<TransactionsHistory />} />
         <Route path="/investments/ledger/:id" element={<LedgerVerification />} />
         <Route path="/admin/investments" element={<AdminInvestments />} />
         <Route path="/admin/security" element={<AdminSecurity />} />

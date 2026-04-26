@@ -42,13 +42,9 @@ export function Commodities() {
             centered={false}
             className="mb-0"
           />
-          <Button nativeButton={false} variant="outline" className="border-gold/30 text-gold hover:bg-gold hover:text-background font-bold gap-3 px-8 h-12 tracking-[0.2em] text-xs transition-all duration-500" render={<Link to="/industries" />}>
-            VIEW ALL COMMODITIES
-            <ArrowRight className="w-4 h-4" />
-          </Button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="flex flex-row overflow-x-auto pb-8 gap-6 snap-x snap-mandatory md:grid md:grid-cols-2 lg:grid-cols-4 md:gap-6 md:snap-none no-scrollbar">
           {commodities.map((item, index) => (
             <motion.div
               key={item.name}
@@ -56,7 +52,7 @@ export function Commodities() {
               whileInView={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.5, delay: index * 0.1 }}
               viewport={{ once: true }}
-              className="group relative overflow-hidden rounded-xl aspect-[3/2] cursor-pointer"
+              className="group relative overflow-hidden rounded-xl aspect-[3/2] cursor-pointer min-w-[300px] md:min-w-0 snap-center"
             >
               <img
                 src={item.image}

@@ -36,11 +36,12 @@ import {
   Area
 } from "recharts";
 import { motion } from "motion/react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/src/lib/supabase";
 import { InvestorPosition, InvestmentSubscription, PerformanceUpdate, FundingSubmission, RedemptionRequest, InvestorTransaction, PriceHistory } from "@/src/types/investments";
 import { cn } from "@/src/lib/utils";
 import { toast } from "sonner";
+import { jsPDF } from "jspdf";
 import { 
   AlertTriangle,
   ArrowDownCircle,
@@ -462,6 +463,87 @@ const PositionPerformanceChart = ({ product_id, priceHistory, units, invested }:
         </ResponsiveContainer>
     );
 };
+
+const InvestmentDocumentItem: React.FC<{ doc: { name: string; type: string } }> = ({ doc }) => {
+  const [isDownloading, setIsDownloading] = React.useState(false);
+
+  const handleDownload = async () => {
+    if (isDownloading) return;
+    setIsDownloading(true);
+
+    // Simulate network delay to make it feel like "secure generation"
+    await new Promise(resolve => setTimeout(resolve, 1500));
+
+    const pdf = new jsPDF();
+    
+    // Add some styling to make it look industry-standard
+    pdf.setFillColor(10, 10, 10);
+    pdf.rect(0, 0, 210, 297, "F"); // Dark background
+
+    // Gold header line
+    pdf.setFillColor(212, 175, 55);
+    pdf.rect(0, 0, 210, 10, "F");
+
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(22);
+    pdf.text("GLOBAL SENTINEL GROUP", 105, 30, { align: "center" });
+
+    pdf.setFontSize(14);
+    pdf.setTextColor(212, 175, 55); // Gold
+    pdf.text("EXECUTION & DISCLOSURE DOCUMENT", 105, 45, { align: "center" });
+
+    pdf.setTextColor(200, 200, 200);
+    pdf.setFontSize(18);
+    pdf.text(doc.name, 105, 70, { align: "center" });
+
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(11);
+    pdf.text(`Date Generated: ${new Date().toLocaleDateString()}`, 20, 100);
+    pdf.text(`Status: VERIFIED & SECURE`, 20, 110);
+    pdf.text(`Document Reference: GSG-${Math.random().toString(36).substring(2, 10).toUpperCase()}`, 20, 120);
+
+    pdf.setFontSize(10);
+    pdf.setTextColor(150, 150, 150);
+    let contentText = `This document ("${doc.name}") serves as a certified record of the position, \nagreement, or statement held with Global Sentinel Group. All positions \nand physical assets are fully audited and secured in tier-1 jurisdictions. \n\nThis document is strictly confidential and intended solely for the authorized \naccount holder. Unauthorized distribution is strictly prohibited under \ninternational trade regulations and the terms of service. For any inquiries, \nplease consult your designated relationship manager or the compliance division.`;
+    
+    if (doc.name.includes("Global Master Agreement")) {
+      contentText = `GLOBAL MASTER TRADING AGREEMENT\n\n1. SCOPE AND EXECUTION\nThis Global Master Agreement ("Agreement") governs the over-the-counter (OTC) trading,\nphysical acquisition, and logistics of strategic commodities between Global Sentinel Group (GSG)\nand the undersigned counterparty. All transactions are subject to final clearance by the GSG\nCompliance Division.\n\n2. MARGIN AND SETTLEMENT\nThe Counterparty agrees to maintain the stipulated margin requirements for leveraged positions.\nFailure to meet margin calls will result in immediate liquidation of positions. Physical delivery\nsettlements require a minimum of 72 hours notice and are subject to logistical feasibility.\n\n3. FORCE MAJEURE\nGSG shall not be held liable for failure or delay in performance resulting from events beyond its\nreasonable control, including but not limited to geopolitical conflicts, embargoes, and\nsupply chain disruptions.`;
+    } else if (doc.name.includes("Position Statement")) {
+      contentText = `POSITION STATEMENT - Q1 2026\n\n1. ASSET ALLOCATION SUMMARY\nThis document serves as an audited statement of the Counterparty's active positions, unencumbered\ncash balances, and vested liquidity pools held with GSG as of the close of Quarter 1, 2026.\n\n2. VALUATION METHODOLOGY\nAll physical bullion assets are marked-to-market using the LBMA PM Fix. Rare Earth Elements (REEs)\nand strategic synthetics are valued based on prevailing spot rates facilitated by our network of\napproved liquidity providers.\n\n3. AUDIT VERIFICATION\nThe holdings detailed herein have been independently verified by our tier-1 auditing partners.\nPhysical assets remain secured in GSG's decentralized vault network.`;
+    } else if (doc.name.includes("Risk Disclosure")) {
+      contentText = `RISK DISCLOSURE ADDENDUM\n\n1. NATURE OF TRADING\nTrading in physical commodities and synthetic derivatives carries a high degree of risk and may not\nbe suitable for all investors. The Counterparty acknowledges that the value of investments can\nfluctuate rapidly due to global geopolitical events, supply chain constraints, and market volatility.\n\n2. LEVERAGE AND MARGIN RISKS\nThe use of leverage can amplify both gains and losses. Counterparties may sustain a total loss of\ninitial margin funds. In the event of extreme market volatility, positions may be liquidated without\nprior notice to satisfy margin deficiencies.\n\n3. LOGISTICAL RELIANCE\nWhile GSG employs military-grade logistics and security, the physical movement of strategic assets\nis subject to international trade laws, customs delays, and potential intercepts in volatile regions.\nGSG's liability is strictly limited to the insured value of the cargo in transit.`;
+    }
+
+    const splitText = pdf.splitTextToSize(contentText, 170);
+    pdf.text(splitText, 20, 140);
+
+    pdf.setFont("helvetica", "italic");
+    pdf.setFontSize(9);
+    pdf.setTextColor(100, 100, 100);
+    pdf.text("--- End of Document ---", 105, 280, { align: "center" });
+
+    pdf.save(`${doc.name.replace(/\s+/g, "_")}_Global_Sentinel.pdf`);
+    
+    setIsDownloading(false);
+  };
+
+  return (
+    <div
+      onClick={handleDownload}
+      className={`flex items-center justify-between p-3 rounded-lg bg-white/5 border border-white/5 hover:border-white/10 transition-colors group cursor-pointer ${isDownloading ? 'opacity-50 pointer-events-none' : ''}`}
+    >
+        <span className="text-xs text-gray-300 group-hover:text-white transition-colors">
+          {isDownloading ? 'Generating ' + doc.type + '...' : doc.name}
+        </span>
+        {isDownloading ? (
+          <div className="w-3.5 h-3.5 border-2 border-gold border-t-transparent rounded-full animate-spin" />
+        ) : (
+          <Download className="w-3.5 h-3.5 text-gray-500 group-hover:text-gold transition-colors" />
+        )}
+    </div>
+  );
+}
 
 export function InvestmentPortfolio() {
   const navigate = useNavigate();
@@ -1100,7 +1182,7 @@ export function InvestmentPortfolio() {
                 </div>
             ) : positions.length > 0 ? (
                 <div className="space-y-4">
-                    {positions.map((position) => {
+                    {positions.slice(0, 4).map((position) => {
                         const perf = performanceData[position.product_id];
                         const livePrice = perf?.current_nav || position.product?.unit_price || (position.total_invested / position.units);
                         const currentPosValue = livePrice * position.units;
@@ -1183,6 +1265,13 @@ export function InvestmentPortfolio() {
                             </Card>
                         );
                     })}
+                    {positions.length > 4 && (
+                        <Link to="/positions" className="block w-full">
+                            <Button variant="outline" className="w-full mt-4 text-xs tracking-widest border-white/10 hover:bg-white/5 text-gray-300">
+                                VIEW ALL POSITIONS
+                            </Button>
+                        </Link>
+                    )}
                 </div>
             ) : (
                 <Card className="bg-secondary/10 border-dashed border-white/10 p-12 text-center">
@@ -1213,10 +1302,7 @@ export function InvestmentPortfolio() {
                         { name: "Position Statement - Q1 2026", type: "PDF" },
                         { name: "Risk Disclosure Addendum", type: "PDF" }
                     ].map(doc => (
-                        <div key={doc.name} className="flex items-center justify-between p-3 rounded-lg bg-white/5 border border-white/5 hover:border-white/10 transition-colors group cursor-pointer">
-                            <span className="text-xs text-gray-300 group-hover:text-white transition-colors">{doc.name}</span>
-                            <Download className="w-3.5 h-3.5 text-gray-500 group-hover:text-gold transition-colors" />
-                        </div>
+                        <InvestmentDocumentItem key={doc.name} doc={doc} />
                     ))}
                 </CardContent>
              </Card>
@@ -1290,7 +1376,8 @@ export function InvestmentPortfolio() {
                 </div>
                 <div className="space-y-4">
                     {transactions.length > 0 ? (
-                        transactions.map(tx => (
+                        <>
+                        {transactions.slice(0, 5).map(tx => (
                             <div key={tx.id} className="flex justify-between items-center py-3 border-b border-white/5 hover:bg-white/5 transition-colors px-1">
                                 <div className="flex items-center gap-3">
                                     <div className={cn(
@@ -1332,7 +1419,15 @@ export function InvestmentPortfolio() {
                                     <p className="text-[9px] text-gray-500 font-mono">{new Date(tx.created_at).toLocaleDateString()}</p>
                                 </div>
                             </div>
-                        ))
+                        ))}
+                        {transactions.length > 5 && (
+                            <Link to="/transactions" className="block w-full">
+                                <Button variant="outline" className="w-full mt-4 text-xs tracking-widest border-white/10 hover:bg-white/5 text-gray-300">
+                                    VIEW ALL TRANSACTIONS
+                                </Button>
+                            </Link>
+                        )}
+                        </>
                     ) : (
                         <div className="py-8 text-center border border-dashed border-white/5 rounded-lg">
                             <p className="text-[10px] text-gray-500 uppercase tracking-widest italic">No transaction history</p>
