@@ -4,7 +4,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { createClient } from "@supabase/supabase-js";
 import { Resend } from 'resend';
-import * as templates from "./src/lib/emailTemplates";
+import * as templates from "./src/lib/emailTemplates.ts";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
