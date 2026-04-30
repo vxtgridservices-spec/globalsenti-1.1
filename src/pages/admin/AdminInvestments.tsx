@@ -33,6 +33,7 @@ import { InvestmentProduct, PerformanceUpdate, RiskLevel, ProductStatus, ROIType
 import { cn } from "@/src/lib/utils";
 import { toast } from "sonner";
 import { AdminChartControls } from "@/src/components/admin/AdminChartControls";
+import { sendTransactionalEmail } from "@/src/services/emailService";
 import { 
   Select, 
   SelectContent, 
@@ -573,6 +574,28 @@ export function AdminInvestments() {
         
         if (error) throw error;
 
+        // Trigger Emails based on status
+        if (status === 'Approved' || status === 'Rejected') {
+            const { data: profile } = await supabase.from('profiles').select('full_name, email').eq('id', request.user_id).single();
+            if (profile) {
+                if (status === 'Approved') {
+                    sendTransactionalEmail('withdrawal-approved', profile.email, {
+                        userName: profile.full_name || profile.email,
+                        amount: request.amount,
+                        payoutMethod: request.payment_destination?.type || 'Standard Transfer',
+                        timestamp: new Date().toLocaleString(),
+                    });
+                } else {
+                    sendTransactionalEmail('withdrawal-rejected', profile.email, {
+                        userName: profile.full_name || profile.email,
+                        amount: request.amount,
+                        reason: request.admin_notes || "Your request does not meet the current liquidity requirements under the master trading agreement.",
+                        timestamp: new Date().toLocaleString(),
+                    });
+                }
+            }
+        }
+
         if (status === 'Completed') {
             // 1. Log redemption transaction
             await supabase.from('investor_transactions').insert({
@@ -906,6 +929,31 @@ export function AdminInvestments() {
 
        setIsUpdatingPerformance(false);
        fetchProducts();
+
+       // 3. Trigger ROI Update Emails to all investors in this product
+       const { data: holders } = await supabase
+           .from('investor_positions')
+           .select('user_id, total_invested, units, profile:profiles(email, full_name)')
+           .eq('product_id', selectedProduct.id)
+           .eq('status', 'Active');
+       
+       if (holders && holders.length > 0) {
+           holders.forEach(holder => {
+               const profile = (holder as any).profile;
+               if (profile && profile.email) {
+                   const currentVal = (performanceForm.current_nav || selectedProduct.unit_price) * holder.units;
+                   sendTransactionalEmail('roi-update', profile.email, {
+                       userName: profile.full_name || profile.email,
+                       assetName: selectedProduct.name,
+                       oldROI: selectedProduct.target_roi, // Using target_roi as reference for "old"
+                       newROI: performanceForm.roi_percentage || 0,
+                       currentValue: currentVal,
+                       timestamp: new Date().toLocaleString(),
+                   });
+               }
+           });
+       }
+
        toast.success(`BROADCAST SUCCESS: Valuation and ROI performance updated for ${selectedProduct.name}.`);
     } catch (err) {
        console.warn("Update failed:", err);

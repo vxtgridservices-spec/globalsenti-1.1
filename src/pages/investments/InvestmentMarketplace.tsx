@@ -26,6 +26,7 @@ import { cn } from "@/src/lib/utils";
 import { toast } from "sonner";
 import { Input } from "@/src/components/ui/input";
 import { Label } from "@/src/components/ui/label";
+import { sendTransactionalEmail } from "@/src/services/emailService";
 
 import { 
   Select, 
@@ -132,6 +133,18 @@ export function InvestmentMarketplace() {
         console.error("Failed to update available units:", updateError);
         // We still continue because the subscription was recorded, 
         // but this is a consistency issue.
+      }
+
+      // 3. Trigger Confirmation Email
+      const { data: profile } = await supabase.from('profiles').select('full_name, email').eq('id', user.id).single();
+      if (profile) {
+        sendTransactionalEmail('investment-confirmation', profile.email, {
+            userName: profile.full_name || user.email,
+            assetName: selectedProduct.name,
+            units: investUnits,
+            amount: totalAmount,
+            timestamp: new Date().toLocaleString(),
+        });
       }
 
       toast.success(`ALLOCATION SECURED: Your purchase for ${investUnits} units of ${selectedProduct.name} has been reserved. Please complete the funding process in your portfolio to activate this investment.`, {

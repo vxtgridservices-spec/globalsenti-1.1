@@ -25,6 +25,7 @@ import {
 import { supabase } from "@/src/lib/supabase";
 import { Loader2, MessageCircle } from "lucide-react";
 import { DealStageModal } from "@/src/components/deals/DealModals";
+import { sendTransactionalEmail } from "@/src/services/emailService";
 
 export function AdminRequests() {
   const [requests, setRequests] = React.useState<any[]>([]);
@@ -141,9 +142,33 @@ export function AdminRequests() {
       
       if (error) throw error;
 
-      // Log system message
+      // Send Emails based on status update
       const targetReq = requests.find(r => r.id === id);
       if (targetReq) {
+        const buyerEmail = targetReq.metadata?.email;
+        const buyerName = targetReq.name || targetReq.metadata?.name || "Valued Client";
+
+        if (newStatus === 'qualified') {
+          if (buyerEmail) {
+            sendTransactionalEmail('deal-invitation', buyerEmail, {
+              userName: buyerName,
+              dealId: targetReq.deal_id,
+              dealType: targetReq.metadata?.commodity || "Private Deal",
+              timestamp: new Date().toLocaleString(),
+            });
+          }
+        } else if (newStatus === 'rejected') {
+          if (buyerEmail) {
+            sendTransactionalEmail('deal-rejected', buyerEmail, {
+               userName: buyerName,
+               dealId: targetReq.deal_id,
+               reason: "Your request does not meet the current qualification requirements for this institutional-grade opportunity.",
+               timestamp: new Date().toLocaleString(),
+            });
+          }
+        }
+
+        // Log system message
         let targetBuyerId = targetReq.buyer_id || targetReq.metadata?.buyer_id || null;
         
         if (!targetBuyerId && targetReq.metadata?.email) {
@@ -154,8 +179,9 @@ export function AdminRequests() {
             .single();
           if (pData) {
             targetBuyerId = pData.id;
-            // Link it
-            await supabase.from('requests').update({ buyer_id: targetBuyerId }).eq('id', targetReq.id);
+            // Link it via metadata
+            const newMetadata = { ...targetReq.metadata, buyer_id: targetBuyerId };
+            await supabase.from('requests').update({ metadata: newMetadata }).eq('id', targetReq.id);
           }
         }
 
@@ -388,7 +414,8 @@ export function AdminRequests() {
           deal={{ 
             id: selectedRequest.deal_id, 
             title: "Requested Deal", 
-            broker_id: selectedRequest.broker_id || "admin" 
+            broker_id: selectedRequest.broker_id || "admin",
+            buyer_id: selectedRequest.buyer_id || selectedRequest.metadata?.buyer_id
           } as any}
           userRequest={selectedRequest}
         />

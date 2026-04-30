@@ -30,8 +30,8 @@ export function ActivityCenter() {
       
       setProfile(profile);
 
-      // Fetch all requests
-      let orQuery = `broker_id.eq.${user.id},buyer_id.eq.${user.id},metadata->>buyer_id.eq.${user.id}`;
+      // Fetch all requests using metadata source of truth
+      let orQuery = `broker_id.eq.${user.id},metadata->>buyer_id.eq.${user.id}`;
       // Use ilike for case-insensitive email matching
       if (user.email) orQuery += `,metadata->>email.ilike.${user.email}`;
 

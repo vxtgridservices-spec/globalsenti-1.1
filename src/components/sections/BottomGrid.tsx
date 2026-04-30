@@ -49,7 +49,6 @@ export function BottomGrid() {
           name: formData.name,
           company: formData.org,
           deal_id: fallbackDealId,
-          buyer_id: user?.id || null,
           status: 'pending',
           stage: 'initiated',
           type: 'consultation',

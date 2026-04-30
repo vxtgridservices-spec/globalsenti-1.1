@@ -1,6 +1,7 @@
 export interface Deal {
   id: string;
   broker_id?: string;
+  buyer_id?: string;
   type: string;
   title: string;
   location: string;

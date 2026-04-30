@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Textarea } from "@/src/components/ui/textarea";
 import { supabase } from "@/src/lib/supabase";
 import { toast } from "sonner";
+import { sendTransactionalEmail } from "@/src/services/emailService";
 import { ChemicalProduct, ChemicalOrder, ChemicalDocument, NewsArticle } from "@/src/types/chemicals";
 import { Loader2, PackagePlus, FileText, CheckCircle, Database, FlaskConical, Copy, Check, FileDown, ShieldCheck, X, Image as ImageIcon } from "lucide-react";
 import { generateChemicalDocument } from "@/src/services/chemicalPdfService";
@@ -349,6 +350,39 @@ export function AdminChemicals() {
 
     const handleUpdateOrderStatus = async (id: string, status: string, field: 'order_status' | 'payment_status') => {
         await supabase.from('chemical_orders').update({ [field]: status }).eq('id', id);
+        
+        // Trigger Emails based on status change
+        const order = orders.find(o => o.id === id);
+        if (order && order.profile) {
+            const profile = order.profile as any;
+            if (field === 'order_status') {
+                if (status === 'Cancelled' || status === 'Rejected') {
+                    sendTransactionalEmail('order-cancelled', profile.email, {
+                        userName: profile.full_name || 'Valued Client',
+                        orderId: id,
+                        reason: "Allocation requirements not met or logistical constraints.",
+                        timestamp: new Date().toLocaleString(),
+                    });
+                } else if (['Approved', 'Shipped', 'Completed', 'Processing'].includes(status)) {
+                    let message = "";
+                    switch(status) {
+                        case 'Processing': message = "Your order is being prepared for fulfillment."; break;
+                        case 'Approved': message = "Your order has been approved and moved to processing."; break;
+                        case 'Shipped': message = "Your order has been dispatched. Track your shipment in the portal."; break;
+                        case 'Completed': message = "Your order has been successfully delivered and completed."; break;
+                    }
+                    
+                    sendTransactionalEmail('order-status', profile.email, {
+                        userName: profile.full_name || 'Valued Client',
+                        orderId: id,
+                        status: status,
+                        message: message,
+                        timestamp: new Date().toLocaleString(),
+                    });
+                }
+            }
+        }
+        
         fetchData();
     };
 

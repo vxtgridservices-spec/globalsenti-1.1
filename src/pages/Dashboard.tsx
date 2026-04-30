@@ -188,8 +188,8 @@ export function Dashboard() {
   }, [profile?.id, requests.length]);
 
   const fetchRequests = async (userId: string, email?: string) => {
-    // Primary query: things we ALREADY own or follow
-    let orQuery = `broker_id.eq.${userId},buyer_id.eq.${userId},metadata->>buyer_id.eq.${userId}`;
+    // Primary query using metadata source of truth
+    let orQuery = `broker_id.eq.${userId},metadata->>buyer_id.eq.${userId}`;
     if (email) {
       // Use ilike for case-insensitive email matching in metadata
       orQuery += `,metadata->>email.ilike.${email}`;
@@ -202,30 +202,29 @@ export function Dashboard() {
     
     if (error) console.error("[AUTH] fetchRequests error:", error);
 
-    // Self-healing: if we found requests via email that don't have our buyer_id, claim them
+    // Self-healing: if we found requests via email that don't have our buyer_id, claim them in metadata
     if (reqs && reqs.length > 0) {
-      const unclaimedReqs = reqs.filter(r => !r.buyer_id && r.metadata?.email?.toLowerCase() === email?.toLowerCase());
+      const unclaimedReqs = reqs.filter(r => !(r.metadata?.buyer_id || r.buyer_id) && r.metadata?.email?.toLowerCase() === email?.toLowerCase());
       if (unclaimedReqs.length > 0) {
         const unclaimedIds = unclaimedReqs.map(r => r.id);
         console.log(`[AUTH] Claiming ${unclaimedIds.length} orphaned requests/messages for user ${userId}`);
         
-        // Claim requests
-        const { error: claimErr } = await supabase
-          .from("requests")
-          .update({ buyer_id: userId })
-          .in("id", unclaimedIds);
-          
-        if (!claimErr) {
+        // Claim requests by updating metadata
+        for (const req of unclaimedReqs) {
+          const newMetadata = { ...req.metadata, buyer_id: userId };
+          await supabase
+            .from("requests")
+            .update({ metadata: newMetadata })
+            .eq("id", req.id);
+            
           // Claim associated messages so RLS allows reading them
           await supabase
             .from("messages")
             .update({ buyer_id: userId })
-            .in("request_id", unclaimedIds);
+            .eq("request_id", req.id);
             
-          // Update the local state with claimed IDs set correctly
-          reqs.forEach(r => {
-            if (unclaimedIds.includes(r.id)) r.buyer_id = userId;
-          });
+          // Update the local state
+          req.metadata = newMetadata;
         }
       }
     }

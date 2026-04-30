@@ -27,6 +27,18 @@ export function ChatPanel({ requestId, userRequest, userRole: propRole, deal: pr
   const [isProtocolVisible, setIsProtocolVisible] = React.useState(true);
   const [roleLoading, setRoleLoading] = React.useState(!propRole);
 
+  const messagesEndRef = React.useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  React.useEffect(() => {
+    if (!loading) {
+      scrollToBottom();
+    }
+  }, [messages, loading]);
+
   // Sync role from prop if it changes
   React.useEffect(() => {
     if (propRole) {
@@ -57,9 +69,6 @@ export function ChatPanel({ requestId, userRequest, userRole: propRole, deal: pr
     setMessages(prev => prev.map(m => 
       m.id === msgId ? { ...m, acknowledged_by: [...(m.acknowledged_by || []), currentUser?.id] } : m
     ));
-    
-    // In a real system, we would update the read_state/metadata in DB
-    // await supabase.from('messages').update({ read_state: ... }).eq('id', msgId);
   };
 
   const getReadStatus = (msg: any) => {
@@ -76,7 +85,6 @@ export function ChatPanel({ requestId, userRequest, userRole: propRole, deal: pr
     let isActive = true;
     
     // 1. Initialize channel synchronously to ensure cleanup has a reference
-    // and to prevent adding listeners after subscribe if remount occurs rapidly.
     const channelName = `room-secure-${requestId}`;
     const channel = supabase
       .channel(channelName)
@@ -91,7 +99,10 @@ export function ChatPanel({ requestId, userRequest, userRole: propRole, deal: pr
         
         setMessages(prev => {
           if (prev.some(m => m.id === newMsg.id)) return prev;
-          return [...prev, newMsg];
+          const updated = [...prev, newMsg];
+          // Use timeout to ensure DOM update before scroll
+          setTimeout(scrollToBottom, 50);
+          return updated;
         });
       })
       .subscribe();
@@ -103,6 +114,21 @@ export function ChatPanel({ requestId, userRequest, userRole: propRole, deal: pr
         
         setCurrentUser(user);
         let currentRole = null;
+        
+        // Fetch request details EARLY to establish security context
+        const { data: reqData, error: reqError } = await supabase
+          .from('requests')
+          .select('deal_id, metadata, broker_id, name')
+          .eq('id', requestId)
+          .single();
+        
+        if (reqError || !reqData) {
+          console.error("[CHAT] Request context missing:", reqError);
+          if (isActive) setDealInfo({ dealId: '', buyerId: null, error: "Conversation context lost. Please refresh." });
+          if (isActive) setLoading(false);
+          return;
+        }
+
         if (user) {
           const { data } = await supabase
             .from('profiles')
@@ -116,34 +142,15 @@ export function ChatPanel({ requestId, userRequest, userRole: propRole, deal: pr
           }
         }
 
-        // Fetch request details to get deal_id and buyer_id for room context
-        const { data: reqData, error: reqError } = await supabase
-          .from('requests')
-          .select('deal_id, metadata, broker_id, buyer_id')
-          .eq('id', requestId)
-          .single();
-        
-        if (reqError || !reqData) {
-          if (isActive) setLoading(false);
-          return;
-        }
-
         const dealId = reqData.deal_id;
-        const buyerId = reqData.buyer_id || reqData.metadata?.buyer_id || null;
+        const buyerId = reqData.metadata?.buyer_id || null;
         const brokerId = reqData.broker_id;
         if (isActive) setDealInfo({ dealId, buyerId, brokerId });
 
         // Debug logging: Rule 6
-        console.log("[CHAT DEBUG] Init Protocol", {
-          requestId,
-          dealId,
-          buyerId,
-          brokerId,
-          currentUserId: user?.id,
-          currentUserRole: currentRole
-        });
+        console.log("[CHAT] Identity Synchronized:", { requestId, buyerId, sender: user?.id });
 
-        // Fetch existing messages - Using the migrated schema (Rule 4)
+        // Fetch existing messages
         const { data, error } = await supabase
           .from('messages')
           .select('*')
@@ -152,6 +159,7 @@ export function ChatPanel({ requestId, userRequest, userRole: propRole, deal: pr
         
         if (!error && isActive) {
           setMessages(data || []);
+          setTimeout(scrollToBottom, 100);
         }
         
         if (isActive) setLoading(false);
@@ -177,27 +185,26 @@ export function ChatPanel({ requestId, userRequest, userRole: propRole, deal: pr
     setNewMessage(""); // Optimistic clear
 
     try {
-      // Debug logging: Rule 6
-      console.log("[CHAT DEBUG] Transmitting", {
-        requestId,
-        senderId: currentUser.id,
-        senderRole: userRole,
-        body: messageBody.substring(0, 15) + "..."
-      });
-
       // Resolve role based on Request Identity (Rule 1)
       let inferredRole = userRole || 'client';
       if (currentUser.id === dealInfo?.brokerId) inferredRole = 'broker';
       else if (currentUser.id === dealInfo?.buyerId) inferredRole = 'buyer';
 
+      const resolvedDealId = dealInfo?.dealId || userRequest?.deal_id || propDeal?.id;
+      
+      if (!resolvedDealId) {
+        toast.error("Protocol Error: Deal reference missing.");
+        return;
+      }
+
       const payload = {
         request_id: requestId,
-        deal_id: dealInfo?.dealId,
-        buyer_id: dealInfo?.buyerId,
+        deal_id: resolvedDealId,
+        buyer_id: dealInfo?.buyerId || userRequest?.metadata?.buyer_id || null,
         sender_id: currentUser.id,
         sender_role: inferredRole,
         body: messageBody,
-        message: messageBody, // Mirror for legacy compatibility
+        message: messageBody,
       };
 
       const { error } = await supabase
@@ -206,8 +213,10 @@ export function ChatPanel({ requestId, userRequest, userRole: propRole, deal: pr
 
       if (error) {
         console.error("Transmission Error:", error);
-        setNewMessage(messageBody); // Restore if failed
-        toast.error(`Transmission failed: ${error.message}`);
+        setNewMessage(messageBody); // Restore
+        toast.error("Transmission failed.");
+      } else {
+        scrollToBottom();
       }
     } catch (err) {
       console.error("System Error during transmission:", err);
@@ -263,9 +272,6 @@ export function ChatPanel({ requestId, userRequest, userRole: propRole, deal: pr
 
             {isProtocolVisible && (
               <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
-                {/* 1. Contract Module visibility check */}
-                {/* Admin Prepping: Stage >= due_diligence */}
-                {/* Buyer/Broker Review: Stage >= contract_issued */}
                 {(
                   (userRole === 'admin' && DEAL_STAGES.indexOf(userRequest.stage as DealStage) >= DEAL_STAGES.indexOf('due_diligence')) ||
                   (userRole !== 'admin' && DEAL_STAGES.indexOf(userRequest.stage as DealStage) >= DEAL_STAGES.indexOf('contract_issued'))
@@ -286,7 +292,6 @@ export function ChatPanel({ requestId, userRequest, userRole: propRole, deal: pr
                   />
                 )}
 
-                {/* 3. Escrow Tracker Section */}
                 {DEAL_STAGES.indexOf(userRequest.stage as DealStage) >= DEAL_STAGES.indexOf('escrow') && (
                   <EscrowTracker 
                     requestId={requestId}
@@ -297,9 +302,6 @@ export function ChatPanel({ requestId, userRequest, userRole: propRole, deal: pr
                   />
                 )}
 
-                {/* 2. Funding Instructions visibility check */}
-                {/* Admin Prepping: Stage >= due_diligence */}
-                {/* Buyer/Broker Info: Stage >= escrow */}
                 {(
                   (userRole === 'admin' && DEAL_STAGES.indexOf(userRequest.stage as DealStage) >= DEAL_STAGES.indexOf('due_diligence')) ||
                   (userRole !== 'admin' && DEAL_STAGES.indexOf(userRequest.stage as DealStage) >= DEAL_STAGES.indexOf('escrow'))
@@ -344,14 +346,6 @@ export function ChatPanel({ requestId, userRequest, userRole: propRole, deal: pr
           </div>
         ) : (
           messages.map((msg) => {
-            // Debug check for ownership (Rule 6)
-            console.log("[MESSAGE OWNERSHIP]", {
-              msgId: msg.id,
-              msgSenderId: msg.sender_id,
-              msgSenderRole: msg.sender_role,
-              currentUserId: currentUser?.id
-            });
-
             const isMe = msg.sender_id === currentUser?.id;
             const body = msg.message || msg.body;
             const isSystemLog = body?.startsWith("[PROTOCOL UPDATE]"); // Rule 3
@@ -441,20 +435,6 @@ export function ChatPanel({ requestId, userRequest, userRole: propRole, deal: pr
                        </div>
                      </div>
                    </div>
-                   {/* Acknowledgement Status (Rule 6) */}
-                   <div className="mt-2 flex items-center gap-3">
-                     <span className="text-[7px] text-gray-700 uppercase font-bold tracking-widest">Acknowledgement State:</span>
-                     <div className="flex items-center gap-1">
-                        <Check className="w-2.5 h-2.5 text-blue-500" />
-                        <span className="text-[7px] text-blue-500/60 font-bold uppercase truncate">Admin ✓</span>
-                     </div>
-                     {msg.acknowledged_by?.length > 0 && (
-                        <div className="flex items-center gap-1">
-                          <Check className="w-2.5 h-2.5 text-blue-500" />
-                          <span className="text-[7px] text-blue-500/60 font-bold uppercase truncate">Participants ✓</span>
-                        </div>
-                     )}
-                   </div>
                  </div>
                );
             }
@@ -481,17 +461,16 @@ export function ChatPanel({ requestId, userRequest, userRole: propRole, deal: pr
                 )}>
                   {body}
                 </div>
-                {/* Status Indicator (Rule 4) */}
-                <div className="mt-1 flex items-center opacity-60 group-hover:opacity-100 transition-opacity">
-                   <p className="text-[7px] text-gray-600 uppercase font-bold tracking-tighter">
-                     {isMe ? "Delivered" : "Reviewed"}
-                   </p>
-                   {getReadStatus(msg)}
-                </div>
+                {getReadStatus(msg) && (
+                   <div className="mt-1 flex items-center opacity-60">
+                      {getReadStatus(msg)}
+                   </div>
+                )}
               </div>
             );
           })
         )}
+        <div ref={messagesEndRef} />
       </div>
       <div className="p-4 bg-black/40 border-t border-white/5">
         <form onSubmit={handleSendMessage} className="flex gap-2 relative">

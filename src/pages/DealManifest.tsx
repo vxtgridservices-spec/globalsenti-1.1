@@ -194,72 +194,72 @@ export function DealManifest() {
     doc.save(`Manifest-${dealData.id}.pdf`);
   };
 
-  React.useEffect(() => {
-    const fetchDeal = async () => {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
+  const fetchDeal = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
 
-        const { data, error } = await supabase
-          .from('deals')
-          .select('*')
-          .eq('id', id)
+      const { data, error } = await supabase
+        .from('deals')
+        .select('*')
+        .eq('id', id)
+        .single();
+      
+      if (error) throw error;
+      setDealData(data);
+
+      // Fetch Broker Profile
+      if (data.broker_id && data.broker_id !== 'admin' && data.broker_id !== 'admin-system') {
+        const { data: bProfile } = await supabase
+          .from('profiles')
+          .select('full_name, email')
+          .eq('id', data.broker_id)
           .single();
-        
-        if (error) throw error;
-        setDealData(data);
-
-        // Fetch Broker Profile
-        if (data.broker_id && data.broker_id !== 'admin' && data.broker_id !== 'admin-system') {
-          const { data: bProfile } = await supabase
-            .from('profiles')
-            .select('full_name, email')
-            .eq('id', data.broker_id)
-            .single();
-          setBrokerProfile(bProfile);
-        }
-
-        if (user) {
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('role')
-            .eq('id', user.id)
-            .single();
-          setUserProfile(profile);
-
-          let reqQuery = supabase
-             .from('requests')
-             .select('*')
-             .eq('deal_id', id);
-          
-          if (ridOverride) {
-            // Admin/Broker override to view specific request
-            reqQuery = reqQuery.eq('id', ridOverride);
-          } else {
-            // Buyer view: fetch their own request
-            const orQuery = `buyer_id.eq.${user.id},metadata->>buyer_id.eq.${user.id}${user.email ? `,metadata->>email.eq.${user.email}` : ''}`;
-            reqQuery = reqQuery.or(orQuery);
-          }
-
-          const { data: reqData } = await reqQuery
-             .order('created_at', { ascending: false })
-             .limit(1)
-             .maybeSingle();
-
-          if (reqData) {
-            setUserRequest(reqData);
-          }
-        }
-      } catch (error) {
-        console.error("Error fetching deal:", error);
-      } finally {
-        setLoading(false);
+        setBrokerProfile(bProfile);
       }
-    };
 
+      if (user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single();
+        setUserProfile(profile);
+
+        let reqQuery = supabase
+           .from('requests')
+           .select('*')
+           .eq('deal_id', id);
+        
+        if (ridOverride) {
+          // Admin/Broker override to view specific request
+          reqQuery = reqQuery.eq('id', ridOverride);
+        } else {
+          // Buyer view: fetch their own request using metadata fields
+          const orQuery = `metadata->>buyer_id.eq.${user.id}${user.email ? `,metadata->>email.eq.${user.email}` : ''}`;
+          reqQuery = reqQuery.or(orQuery);
+        }
+
+        const { data: reqData } = await reqQuery
+           .order('created_at', { ascending: false })
+           .limit(1)
+           .maybeSingle();
+
+        if (reqData) {
+          setUserRequest(reqData);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching deal:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  React.useEffect(() => {
     fetchDeal();
   }, [id]);
 
-  // Realtime stage sync
+  // Realtime stage/status sync
   React.useEffect(() => {
     if (!userRequest?.id) return;
 
@@ -274,7 +274,7 @@ export function DealManifest() {
       }, (payload) => {
         // Rule 3: Direct state injection from DB source of truth
         setUserRequest(payload.new);
-        console.log("[PROTOCOL SYNC] Stage Advanced:", payload.new.stage);
+        console.log("[PROTOCOL SYNC] Request Updated:", payload.new.stage, payload.new.status);
       })
       .subscribe();
 
@@ -300,6 +300,7 @@ export function DealManifest() {
       
       if (error) throw error;
       
+      // Local update will be reinforced by Realtime if it was correctly subscribed
       setUserRequest((prev: any) => ({ ...prev, status: 'due_diligence', stage: 'due_diligence' }));
 
       // Protocol Log
@@ -325,7 +326,6 @@ export function DealManifest() {
 
   const handleOpenDealRoom = () => {
     setIsContactModalOpen(true);
-    // REMOVED auto-update for buyers. Brokers/Admins can update stages manually.
   };
 
   const handleUpdateStage = async (newStage: DealStage) => {
@@ -779,11 +779,11 @@ export function DealManifest() {
       {/* Modals */}
       <PurchaseRequestModal 
         isOpen={isPurchaseModalOpen} 
-        onClose={() => {
-          setIsPurchaseModalOpen(false);
-          // Simple optimistic check to refresh request logic if they submitted
-          setUserRequest((prev: any) => prev || { status: 'pending', type: 'EOI' });
-        }} 
+        onClose={() => setIsPurchaseModalOpen(false)} 
+        onSuccess={() => {
+          // Re-fetch deal data after successful submission
+          fetchDeal();
+        }}
         deal={dealData} 
       />
       <DealStageModal 

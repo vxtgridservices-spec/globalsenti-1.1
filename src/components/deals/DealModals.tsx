@@ -33,14 +33,16 @@ import { toast } from "sonner";
 import { ALLOWED_TRANSITIONS, STAGE_LABELS, DealStage, ROLE_PERMISSIONS } from "./DealStageTracker";
 import { ChatPanel } from "./ChatPanel";
 import { ShipmentTracker } from "./ShipmentTracker";
+import { sendTransactionalEmail } from "@/src/services/emailService";
 
 interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
   deal: Deal;
+  onSuccess?: () => void;
 }
 
-export function PurchaseRequestModal({ isOpen, onClose, deal }: ModalProps) {
+export function PurchaseRequestModal({ isOpen, onClose, deal, onSuccess }: ModalProps) {
   const [loading, setLoading] = React.useState(false);
   const [submitted, setSubmitted] = React.useState(false);
   const [pofFile, setPofFile] = React.useState<File | null>(null);
@@ -76,12 +78,15 @@ export function PurchaseRequestModal({ isOpen, onClose, deal }: ModalProps) {
             title: deal.title,
             buyer_id: user?.id,
             broker_id: deal.broker_id,
+            email: user?.email,
+            name: formData.name
           },
         },
       ]);
 
       if (error) throw error;
       setSubmitted(true);
+      if (onSuccess) onSuccess();
     } catch (error) {
       console.error("Error submitting interest:", error);
     } finally {
@@ -366,6 +371,57 @@ export function DealStageModal({
       if (error) throw error;
       
       setCurrentStage(newStage);
+
+      // Trigger Stage Emails
+      const buyerEmail = userRequest.metadata?.email;
+      const buyerName = userRequest.name || userRequest.metadata?.name || "Valued Client";
+
+      if (buyerEmail) {
+        if (newStage === 'terms_agreed' || newStage === 'contract_issued') {
+          sendTransactionalEmail('contract-ready', buyerEmail, {
+            userName: buyerName,
+            dealId: userRequest.deal_id,
+            timestamp: new Date().toLocaleString(),
+          });
+        } else if (newStage === 'escrow') {
+          sendTransactionalEmail('escrow-initiated', buyerEmail, {
+            userName: buyerName,
+            dealId: userRequest.deal_id,
+            timestamp: new Date().toLocaleString(),
+          });
+        } else if (newStage === 'closed') {
+          sendTransactionalEmail('deal-completed', buyerEmail, {
+            userName: buyerName,
+            dealId: userRequest.deal_id,
+            timestamp: new Date().toLocaleString(),
+          });
+        } else if (newStage === 'rejected') {
+          sendTransactionalEmail('deal-rejected', buyerEmail, {
+            userName: buyerName,
+            dealId: userRequest.deal_id,
+            timestamp: new Date().toLocaleString(),
+          });
+        } else {
+            // General Stage Update
+            let explanation = "";
+            switch(newStage) {
+                case 'review': explanation = "The documentation provided is currently undergoing institutional review and compliance verification."; break;
+                case 'qualified': explanation = "Due diligence on the initial requisition has been completed. The transaction is now cleared for negotiation."; break;
+                case 'negotiation': explanation = "Active price, volume, and logistical negotiation is now underway between the principles."; break;
+                case 'due_diligence': explanation = "Extended due diligence on product origin and logistical capacity is being finalized."; break;
+                case 'shipment': explanation = "Logistics protocols have been activated. The shipment is being prepared for global transit."; break;
+                default: explanation = `Your transaction has progressed to the ${STAGE_LABELS[newStage as DealStage]} stage.`;
+            }
+
+            sendTransactionalEmail('deal-stage-update', buyerEmail, {
+                userName: buyerName,
+                dealId: userRequest.deal_id,
+                newStage: STAGE_LABELS[newStage as DealStage],
+                explanation: explanation,
+                timestamp: new Date().toLocaleString(),
+            });
+        }
+      }
 
       // Audit Log
       const oldLabel = STAGE_LABELS[currentStage as DealStage];

@@ -3,6 +3,7 @@ import { ShieldAlert, Landmark, CheckCircle, Clock, FileUp, ExternalLink, Activi
 import { Button } from "@/src/components/ui/button";
 import { supabase } from "@/src/lib/supabase";
 import { toast } from "sonner";
+import { sendTransactionalEmail } from "@/src/services/emailService";
 
 interface EscrowTrackerProps {
   requestId: string;
@@ -56,6 +57,21 @@ export function EscrowTracker({ requestId, dealId, buyerId, brokerId, isAdmin, u
     };
   }, [dealId, requestId]);
 
+  // Rule: Realtime Sync for Metadata Fallback
+  React.useEffect(() => {
+    if (userRequest?.metadata?.escrow) {
+      // Prioritize metadata if it exists and we don't have an escrow or it's potentially newer
+      const metaEscrow = userRequest.metadata.escrow;
+      setEscrow((prev: any) => {
+        if (!prev) return metaEscrow;
+        // If we have both, prefer the one with newer update or more advanced status
+        const prevTime = new Date(prev.updated_at || prev.created_at).getTime();
+        const metaTime = new Date(metaEscrow.updated_at || metaEscrow.created_at).getTime();
+        return metaTime >= prevTime ? metaEscrow : prev;
+      });
+    }
+  }, [userRequest?.metadata?.escrow]);
+
   // Timer Effect
   React.useEffect(() => {
     if (!escrow?.expires_at || escrow.status === ESCROW_STATES.RELEASED || escrow.status === ESCROW_STATES.FAILED) {
@@ -102,7 +118,15 @@ export function EscrowTracker({ requestId, dealId, buyerId, brokerId, isAdmin, u
         throw error;
       }
 
-      if (data) setEscrow(data);
+      if (data) {
+        setEscrow(data);
+      } else {
+        // Rule: Even if no DB error, if table is empty check metadata fallback
+        const latestEscrow = userRequest?.metadata?.escrow;
+        if (latestEscrow) {
+          setEscrow(latestEscrow);
+        }
+      }
     } catch (err) {
       console.error("Failed to load escrow state", err);
     } finally {
@@ -202,6 +226,17 @@ export function EscrowTracker({ requestId, dealId, buyerId, brokerId, isAdmin, u
         try {
           await supabase.from('requests').update({ stage: 'shipment' }).eq('id', requestId);
           await logProtocolEvent("Funding verified. Global Sentinel Group has advanced the transaction to GLOBAL LOGISTICS.");
+          
+          // Trigger Funding Confirmed Email
+          const buyerEmail = userRequest?.metadata?.email;
+          const buyerName = userRequest?.name || userRequest?.metadata?.name || "Valued Client";
+          if (buyerEmail) {
+            sendTransactionalEmail('funding-confirmed', buyerEmail, {
+              userName: buyerName,
+              dealId: dealId,
+              timestamp: new Date().toLocaleString(),
+            });
+          }
         } catch (err) {
           console.error("Failed to advance stage to shipment", err);
         }
@@ -227,15 +262,6 @@ export function EscrowTracker({ requestId, dealId, buyerId, brokerId, isAdmin, u
       console.error(err);
       toast.error("Failed to update escrow status");
     }
-  };
-
-  const handleUploadProof = async () => {
-    setIsUploading(true);
-    // Simulate upload delay
-    setTimeout(async () => {
-       setIsUploading(false);
-       await logProtocolEvent("Buyer uploaded proof of funding. Compliance verification initiated.");
-    }, 1500);
   };
 
   const formatTime = (seconds: number) => {
@@ -303,14 +329,62 @@ export function EscrowTracker({ requestId, dealId, buyerId, brokerId, isAdmin, u
   if (loading) return null;
 
   const statusDisplay = getStatusDisplay();
-  const isBuyer = currentUser?.id === (buyerId || userRequest?.metadata?.buyer_id);
-  const isBroker = currentUser?.id === (brokerId || userRequest?.broker_id);
+  
+  // Rule 1: Robust identity detection using metadata fallback and email matching
+  const isBuyer = currentUser?.id === (buyerId || userRequest?.metadata?.buyer_id) || 
+                  (currentUser?.email && userRequest?.metadata?.email && currentUser.email.toLowerCase() === userRequest.metadata.email.toLowerCase());
+  const isBroker = currentUser?.id === (brokerId || userRequest?.broker_id) ||
+                   (currentUser?.email && userRequest?.metadata?.broker_email && currentUser.email.toLowerCase() === userRequest.metadata.broker_email.toLowerCase());
+  // isAdmin is passed as a prop from the parent which has already verified the profile role
 
   const shipment = userRequest?.metadata?.shipment;
   const canRelease = isAdmin && (
     shipment?.status === "delivered" || 
     (shipment?.status === "inspection_passed" && shipment?.buyer_approved_inspection)
   );
+
+  const handleUploadProof = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !escrow) return;
+
+    setIsUploading(true);
+    try {
+      // In this environment, we simulate the storage path but update the database record
+      const fileName = `${escrow.id}-${file.name}`;
+      const proofUrl = `https://bin.globalsentinelgroup.com/proofs/${fileName}`;
+      
+      const updatedEscrow = { 
+        ...escrow, 
+        status: ESCROW_STATES.FUNDED,
+        proof_url: proofUrl,
+        metadata: { ...(escrow.metadata || {}), proof_filename: file.name, uploaded_at: new Date().toISOString() } 
+      };
+
+      const { error } = await supabase
+        .from('escrow')
+        .update({ 
+          status: ESCROW_STATES.FUNDED, 
+          metadata: updatedEscrow.metadata 
+        })
+        .eq('id', escrow.id);
+
+      if (error && (error.code === '42P01' || error.message.includes('escrow'))) {
+        const newMetadata = { ...(userRequest?.metadata || {}), escrow: updatedEscrow };
+        await supabase.from('requests').update({ metadata: newMetadata }).eq('id', requestId);
+        setEscrow(updatedEscrow);
+      } else {
+        setEscrow(updatedEscrow);
+      }
+
+      await logProtocolEvent(`Buyer uploaded funding proof: ${file.name}. Verification protocol activated.`);
+      toast.success("Funding proof uploaded successfully.");
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to upload proof.");
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   return (
     <div className="bg-secondary/40 border border-white/5 rounded-2xl p-6 relative overflow-hidden group">
@@ -339,7 +413,7 @@ export function EscrowTracker({ requestId, dealId, buyerId, brokerId, isAdmin, u
       {!escrow && (
         <div className="flex justify-between items-center z-10 relative mt-6">
           <p className="text-xs text-gray-400 font-serif italic">Escrow protocol not yet initiated for this transaction.</p>
-          {(isAdmin || isBuyer) && (
+          {isAdmin && (
             <Button 
               variant="outline" 
               className="border-gold text-gold hover:bg-gold/10 h-10 px-6 rounded-xl font-black uppercase tracking-widest text-[10px]"
@@ -349,6 +423,9 @@ export function EscrowTracker({ requestId, dealId, buyerId, brokerId, isAdmin, u
               <Landmark className="w-4 h-4 mr-2" />
               {initiating ? "Protocol Initiating..." : "Initiate Escrow"}
             </Button>
+          )}
+          {!isAdmin && isBuyer && (
+             <p className="text-[10px] text-gold/60 font-bold uppercase tracking-widest">Awaiting Institutional Initiation</p>
           )}
         </div>
       )}
@@ -376,7 +453,7 @@ export function EscrowTracker({ requestId, dealId, buyerId, brokerId, isAdmin, u
              </p>
              <p className="text-[11px] text-gray-300 leading-relaxed font-medium">
                {escrow.status === ESCROW_STATES.FUNDING_AWAITED && (isBuyer ? "Please transfer funds according to published banking instructions and click 'Confirm Funding'." : "Awaiting buyer funding confirmation within the strictly enforced 48-hour protocol window.")}
-               {escrow.status === ESCROW_STATES.FUNDED && (isAdmin ? "Buyer has self-certified funding. Verification of bank receipt is required to advance protocol." : "Funding confirmation received from buyer. Global Sentinel Group compliance is verifying receipt.")}
+               {escrow.status === ESCROW_STATES.FUNDED && (isAdmin ? "Buyer has submitted proof of funding. Verification of bank receipt is required to advance protocol." : "Funding confirmation received. Global Sentinel Group compliance is verifying receipt.")}
                {escrow.status === ESCROW_STATES.FUNDS_VERIFIED && (isAdmin ? "Funds verified and locked. Ready for synchronized release to respective accounts." : "Funds successfully verified in secured escrow. Awaiting release authorization.")}
                {escrow.status === ESCROW_STATES.RELEASED && "Escrow protocol successfully terminated. Funds have been released to respective parties."}
                {escrow.status === ESCROW_STATES.FAILED && "Transaction flagged: Protocol failure or expiration detected. Audit log restricted to Compliance Officers."}
@@ -387,22 +464,40 @@ export function EscrowTracker({ requestId, dealId, buyerId, brokerId, isAdmin, u
                  <CheckCircle className="w-3 h-3" /> Tip: View 'Funding Instructions' below for banking details.
                </div>
              )}
+
+             {isAdmin && escrow.status === ESCROW_STATES.FUNDED && escrow.metadata?.proof_filename && (
+                <div className="mt-3 p-2 bg-blue-500/10 border border-blue-500/20 rounded-lg flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <FileUp className="w-3 h-3 text-blue-400" />
+                    <span className="text-[8px] text-blue-400 font-black uppercase">Proof: {escrow.metadata.proof_filename}</span>
+                  </div>
+                  <Button variant="link" className="h-auto p-0 text-[8px] text-gold uppercase font-bold" onClick={() => toast.info("Proof image decryption initiated...")}>View Proof</Button>
+                </div>
+             )}
           </div>
           
           {isBuyer && escrow.status === ESCROW_STATES.FUNDING_AWAITED && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <Button 
-                variant="outline"
-                className="border-white/10 hover:bg-white/5 text-xs text-gray-400 font-bold uppercase tracking-widest h-12"
-                onClick={handleUploadProof}
-                disabled={isUploading}
-              >
-                <FileUp className="w-4 h-4 mr-2" />
-                {isUploading ? "Uploading..." : "Upload Proof"}
-              </Button>
+              <div className="relative group/upload h-12">
+                <input 
+                  type="file" 
+                  className="absolute inset-0 opacity-0 cursor-pointer z-10" 
+                  accept=".pdf,.jpg,.jpeg,.png"
+                  onChange={handleUploadProof}
+                  disabled={isUploading}
+                />
+                <Button 
+                  variant="outline"
+                  className="w-full border-white/10 hover:bg-white/5 text-xs text-gray-400 font-bold uppercase tracking-widest h-full"
+                  disabled={isUploading}
+                >
+                  <FileUp className="w-4 h-4 mr-2" />
+                  {isUploading ? "Uploading..." : "Upload Proof"}
+                </Button>
+              </div>
               <Button 
                 className="bg-gold hover:bg-gold-light text-background font-black h-12 uppercase tracking-widest shadow-lg shadow-gold/20"
-                onClick={() => handleUpdateEscrow(ESCROW_STATES.FUNDED, "Buyer confirmed funding. Verification requested.")}
+                onClick={() => handleUpdateEscrow(ESCROW_STATES.FUNDED, "Buyer self-certified funding sent. Verification portal opened.")}
               >
                 Confirm Funding Sent
               </Button>
@@ -423,9 +518,9 @@ export function EscrowTracker({ requestId, dealId, buyerId, brokerId, isAdmin, u
                  <span className="text-[10px] text-gray-500 font-black uppercase tracking-widest">Administrative Control Panel</span>
                  <div className="h-px flex-1 bg-white/5" />
                </div>
-               <Button size="sm" variant="outline" className="h-8 border-yellow-500/30 text-yellow-500 hover:bg-yellow-500/10 text-[9px] font-black uppercase tracking-wider" onClick={() => handleUpdateEscrow(ESCROW_STATES.FUNDING_AWAITED, "Administration reset window to Funding Awaited.")}>Awaiting</Button>
-               <Button size="sm" variant="outline" className="h-8 border-blue-400/30 text-blue-400 hover:bg-blue-400/10 text-[9px] font-black uppercase tracking-wider" onClick={() => handleUpdateEscrow(ESCROW_STATES.FUNDED, "Administration manually marked as Funded.")}>Funded</Button>
-               <Button size="sm" variant="outline" className="h-8 border-green-500/30 text-green-500 hover:bg-green-500/10 text-[9px] font-black uppercase tracking-wider" onClick={() => handleUpdateEscrow(ESCROW_STATES.FUNDS_VERIFIED, "Compliance verified funds. Settlement authenticated.")}>Verify</Button>
+               <Button size="sm" variant="outline" className={`h-8 border-yellow-500/30 text-yellow-500 hover:bg-yellow-500/10 text-[9px] font-black uppercase tracking-wider ${escrow.status === ESCROW_STATES.FUNDING_AWAITED ? 'ring-1 ring-yellow-500' : ''}`} onClick={() => handleUpdateEscrow(ESCROW_STATES.FUNDING_AWAITED, "Administration reset window to Funding Awaited.")}>Awaiting</Button>
+               <Button size="sm" variant="outline" className={`h-8 border-blue-400/30 text-blue-400 hover:bg-blue-400/10 text-[9px] font-black uppercase tracking-wider ${escrow.status === ESCROW_STATES.FUNDED ? 'ring-2 ring-blue-400 animate-pulse bg-blue-400/5' : ''}`} onClick={() => handleUpdateEscrow(ESCROW_STATES.FUNDED, "Administration manually marked as Funded.")}>Funded</Button>
+               <Button size="sm" variant="outline" className={`h-8 border-green-500/30 text-green-500 hover:bg-green-500/10 text-[9px] font-black uppercase tracking-wider ${escrow.status === ESCROW_STATES.FUNDED ? 'bg-green-500/10' : ''}`} onClick={() => handleUpdateEscrow(ESCROW_STATES.FUNDS_VERIFIED, "Compliance verified funds. Settlement authenticated.")}>Verify & Secure</Button>
                <Button 
                 size="sm" 
                 variant="outline" 

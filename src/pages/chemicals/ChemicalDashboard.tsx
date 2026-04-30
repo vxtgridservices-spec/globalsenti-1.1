@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/src/components/ui/dialog";
 import { supabase } from "@/src/lib/supabase";
 import { toast } from "sonner";
+import { sendTransactionalEmail } from "@/src/services/emailService";
 import { ChemicalProduct, ChemicalOrder, ChemicalDocument } from "@/src/types/chemicals";
 import { Package, FileText, CheckCircle2, FlaskConical, Clock, Truck, ShieldAlert, ArrowRight, Loader2, UploadCloud, Download, FileDown, Copy } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -135,6 +136,19 @@ export function ChemicalDashboard() {
             }]);
 
             if (error) throw error;
+
+            // Trigger Order Confirmation Email
+            const { data: profile } = await supabase.from('profiles').select('full_name, email').eq('id', user.id).single();
+            if (profile) {
+              sendTransactionalEmail('order-confirmation', profile.email, {
+                userName: profile.full_name || 'Valued Client',
+                orderId: 'TBD', // We'd ideally fetch the inserted ID, but we can use a placeholder or re-fetch
+                productName: selectedProduct.name,
+                quantity: `${numQty} ${selectedProduct.unit_type}`,
+                totalPrice: `$${totalPrice.toLocaleString()}`,
+                timestamp: new Date().toLocaleString(),
+              });
+            }
             
             setSelectedProduct(null);
             setQuantity("");

@@ -3,8 +3,26 @@ import { createServer as createViteServer } from "vite";
 import path from "path";
 import { fileURLToPath } from "url";
 import { createClient } from "@supabase/supabase-js";
+import { Resend } from 'resend';
+import * as templates from "./src/lib/emailTemplates";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+// Lazy Resend initialization
+let resendClient: Resend | null = null;
+function getResend() {
+  if (!resendClient) {
+    const key = process.env.RESEND_API_KEY;
+    if (!key) {
+      console.warn("RESEND_API_KEY is missing. Email features will be disabled.");
+      return null;
+    }
+    resendClient = new Resend(key);
+  }
+  return resendClient;
+}
+
+const SENDER = "Global Sentinel <info@globalsentinelgroup.com>"; 
 
 // Initialize Supabase Admin Client
 const supabaseAdmin = createClient(
@@ -18,33 +36,27 @@ const adminAuth = async (req: express.Request, res: express.Response, next: expr
   if (!authHeader) return res.status(401).json({ error: "Unauthorized" });
 
   const token = authHeader.split(" ")[1];
-  const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+  try {
+    const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+    if (error || !user) return res.status(401).json({ error: "Unauthorized" });
 
-  if (error || !user) return res.status(401).json({ error: "Unauthorized" });
+    const { data: userData, error: profileError } = await supabaseAdmin
+      .from("profiles")
+      .select("*")
+      .eq("id", user.id)
+      .single();
 
-  // Simple role check (assuming a 'role' column in 'profiles' table)
-  const { data: userData, error: profileError } = await supabaseAdmin
-    .from("profiles")
-    .select("*") // Select all to see what's actually there
-    .eq("id", user.id)
-    .single();
+    if (profileError || !userData || userData.role !== "admin") {
+      return res.status(403).json({ 
+        error: "Forbidden"
+      });
+    }
 
-  console.log("Debug - User ID:", user.id);
-  console.log("Debug - Full Profile Data:", JSON.stringify(userData));
-  console.log("Debug - Profile Error:", profileError);
-
-  if (profileError || !userData || userData.role !== "admin") {
-    return res.status(403).json({ 
-      error: "Forbidden", 
-      debug: { 
-        role: userData?.role,
-        error: profileError,
-        dataFound: !!userData
-      } 
-    });
+    next();
+  } catch (err) {
+    console.error("Auth error:", err);
+    res.status(500).json({ error: "Authentication failed" });
   }
-
-  next();
 };
 
 async function startServer() {
@@ -58,15 +70,160 @@ async function startServer() {
     res.json({ status: "ok" });
   });
 
+  // Email API Routes
+  app.post("/api/email/send", async (req, res) => {
+    const { type, recipientEmail, data } = req.body;
+    
+    try {
+      const resend = getResend();
+      if (!resend) {
+        return res.status(500).json({ error: "Email service not configured" });
+      }
+
+      let html = "";
+      let subject = "";
+
+      switch (type) {
+        case "investment-confirmation":
+          html = templates.investmentConfirmationTemplate(data);
+          subject = "Investment Confirmed – Global Sentinel Group";
+          break;
+        case "withdrawal-request":
+          html = templates.withdrawalRequestTemplate(data);
+          subject = "Withdrawal Request Received";
+          break;
+        case "withdrawal-approved":
+          html = templates.withdrawalApprovedTemplate(data);
+          subject = "Withdrawal Approved";
+          break;
+        case "withdrawal-rejected":
+          html = templates.withdrawalRejectedTemplate(data);
+          subject = "Withdrawal Request Update";
+          break;
+        case "roi-update":
+          html = templates.roiUpdateTemplate(data);
+          subject = "Portfolio Update";
+          break;
+        case "welcome":
+          html = templates.welcomeEmailTemplate(data);
+          subject = "Welcome to Global Sentinel Group";
+          break;
+        case "verification":
+          html = templates.verificationEmailTemplate(data);
+          subject = "Verify Your Account – Global Sentinel Group";
+          break;
+        case "password-reset":
+          html = templates.passwordResetTemplate(data);
+          subject = "Password Reset Request";
+          break;
+        case "order-confirmation":
+          html = templates.orderConfirmationTemplate(data);
+          subject = "Order Confirmation – Chemical Division";
+          break;
+        case "order-status":
+          html = templates.orderStatusTemplate(data);
+          subject = "Order Status Update";
+          break;
+        case "order-cancelled":
+          html = templates.orderCancelledTemplate(data);
+          subject = "Order Update";
+          break;
+        case "deal-invitation":
+          html = templates.dealInvitationTemplate(data);
+          subject = "Deal Room Access Granted";
+          break;
+        case "deal-stage-update":
+          html = templates.dealStageUpdateTemplate(data);
+          subject = "Transaction Status Updated";
+          break;
+        case "contract-ready":
+          html = templates.contractReadyTemplate(data);
+          subject = "Contract Ready for Review";
+          break;
+        case "escrow-initiated":
+          html = templates.escrowInitiatedTemplate(data);
+          subject = "Escrow Process Initiated";
+          break;
+        case "funding-confirmed":
+          html = templates.fundingConfirmedTemplate(data);
+          subject = "Funding Confirmed";
+          break;
+        case "deal-completed":
+          html = templates.dealCompletedTemplate(data);
+          subject = "Transaction Completed";
+          break;
+        case "deal-rejected":
+          html = templates.dealRejectedTemplate(data);
+          subject = "Transaction Closed";
+          break;
+        default:
+          return res.status(400).json({ error: "Invalid email type" });
+      }
+
+      const response = await resend.emails.send({
+        from: SENDER,
+        to: recipientEmail,
+        subject: subject,
+        html: html,
+      });
+
+      console.log(`Email sent successfully: ${type} to ${recipientEmail}`);
+      res.json({ success: true, response });
+    } catch (error) {
+      console.error("Failed to send email:", error);
+      res.status(500).json({ success: false, error: "Failed to send email" });
+    }
+  });
+
+  // Authentication Proxy with Resend Integration
+  app.post("/api/auth/register", async (req, res) => {
+    const { email, password, fullName, companyName, serviceRequest } = req.body;
+
+    try {
+      const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
+        type: 'signup',
+        email: email,
+        password: password,
+        options: {
+           redirectTo: `${req.headers.origin}/portal`,
+           data: {
+             full_name: fullName,
+             company_name: companyName,
+             service_request: serviceRequest,
+             role: 'client'
+           }
+        }
+      });
+
+      if (linkError) throw linkError;
+
+      const resend = getResend();
+      if (resend) {
+        await resend.emails.send({
+          from: SENDER,
+          to: email,
+          subject: "Verify Your Global Sentinel Identity",
+          html: templates.verificationEmailTemplate({
+            userName: fullName || 'Valued Client',
+            verificationLink: linkData.properties.action_link
+          }),
+        });
+      }
+
+      res.json({ success: true, message: "Credential request registered. Verification dispatched." });
+    } catch (error: any) {
+      console.error("Registration error:", error);
+      res.status(400).json({ success: false, error: error.message });
+    }
+  });
+
   // Admin Route
   app.get("/api/admin/dashboard-stats", adminAuth, async (req, res) => {
     try {
-      // Fetch real data from Supabase
       const { count: totalUsers } = await supabaseAdmin.from("profiles").select("*", { count: "exact", head: true });
       const { count: activeEscrows } = await supabaseAdmin.from("escrows").select("*", { count: "exact", head: true }).eq("status", "active");
       const { count: pendingApprovals } = await supabaseAdmin.from("escrows").select("*", { count: "exact", head: true }).eq("status", "pending");
       
-      // Placeholder for revenue calculation
       const revenue = 45000;
 
       res.json({
@@ -100,4 +257,7 @@ async function startServer() {
   });
 }
 
-startServer();
+startServer().catch(err => {
+    console.error("Critical server startup error:", err);
+    process.exit(1);
+});

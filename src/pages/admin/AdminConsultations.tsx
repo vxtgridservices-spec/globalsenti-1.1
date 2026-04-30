@@ -140,8 +140,9 @@ export function AdminConsultations() {
         
         if (pData) {
           targetBuyerId = pData.id;
-          // Update the request as well so it's linked permanently
-          await supabase.from('requests').update({ buyer_id: targetBuyerId }).eq('id', selectedInquiry.id);
+          // Update the request as well so it's linked permanently via metadata
+          const newMetadata = { ...selectedInquiry.metadata, buyer_id: targetBuyerId };
+          await supabase.from('requests').update({ metadata: newMetadata }).eq('id', selectedInquiry.id);
         }
       }
 

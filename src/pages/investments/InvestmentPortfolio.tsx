@@ -42,6 +42,7 @@ import { InvestorPosition, InvestmentSubscription, PerformanceUpdate, FundingSub
 import { cn } from "@/src/lib/utils";
 import { toast } from "sonner";
 import { jsPDF } from "jspdf";
+import { sendTransactionalEmail } from "@/src/services/emailService";
 import { 
   AlertTriangle,
   ArrowDownCircle,
@@ -757,7 +758,17 @@ export function InvestmentPortfolio() {
 
         if (redemptionError) throw redemptionError;
 
-        // 2. Log Transaction
+        // 2. Trigger Withdrawal Request Email
+        const { data: profile } = await supabase.from('profiles').select('full_name, email').eq('id', user.id).single();
+        if (profile) {
+            sendTransactionalEmail('withdrawal-request', profile.email, {
+                userName: profile.full_name || user.email,
+                amount: amount,
+                timestamp: new Date().toLocaleString(),
+            });
+        }
+
+        // 3. Log Transaction
         const { error: txError } = await supabase
           .from('investor_transactions')
           .insert({

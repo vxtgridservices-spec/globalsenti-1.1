@@ -2,14 +2,17 @@ import React, { useState } from "react";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
 import { Label } from "@/src/components/ui/label";
-import { Shield, Lock, ArrowLeft, Loader2 } from "lucide-react";
+import { Shield, Lock, ArrowLeft, Loader2, CheckCircle2 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/src/lib/supabase";
 import { toast } from "sonner";
+import { sendTransactionalEmail } from "@/src/services/emailService";
 
 export function ClientPortal() {
   const [isLogin, setIsLogin] = useState(true);
+  const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -18,6 +21,38 @@ export function ClientPortal() {
     serviceRequest: "",
   });
   const navigate = useNavigate();
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.email) {
+      toast.error("Please enter your client ID / email first.");
+      return;
+    }
+    setLoading(true);
+    try {
+      const { data: profile } = await supabase.from('profiles').select('full_name').eq('email', formData.email).single();
+      
+      const { error } = await supabase.auth.resetPasswordForEmail(formData.email, {
+        redirectTo: `${window.location.origin}/portal?reset=true`,
+      });
+      
+      if (error) throw error;
+
+      // Trigger Password Reset Email
+      await sendTransactionalEmail('password-reset', formData.email, {
+        userName: profile?.full_name || 'Valued Client',
+        resetLink: `${window.location.origin}/portal?reset=true`,
+        timestamp: new Date().toLocaleString(),
+      });
+
+      setResetSent(true);
+      toast.success("Security reset protocol initiated. Check your email.");
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,30 +91,93 @@ export function ClientPortal() {
         }
       }
     } else {
-      // For a platform like this, we might want to handle registration differently
-      // (e.g., manual approval), but for now we'll use Supabase Auth
-      const { error } = await supabase.auth.signUp({
-        email: formData.email,
-        password: formData.password,
-        options: {
-          data: {
-            full_name: formData.fullName,
-            company_name: formData.companyName,
-            service_request: formData.serviceRequest,
-            role: 'client'
-          }
+      // Use the professional registration protocol (backend via Resend)
+      try {
+        const response = await fetch('/api/auth/register', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email: formData.email,
+            password: formData.password,
+            fullName: formData.fullName,
+            companyName: formData.companyName,
+            serviceRequest: formData.serviceRequest
+          }),
+        });
+        
+        const result = await response.json();
+        
+        if (!response.ok) {
+           throw new Error(result.error || "Authentication protocol failed.");
         }
-      });
-      
-      if (error) {
-        toast.error(error.message);
-      } else {
-        toast.success("Access request submitted. Please check your email for verification.");
+        
+        toast.success("Security credentials created. Professional verification dispatched.");
         setIsLogin(true);
+      } catch (error: any) {
+        toast.error(error.message);
       }
     }
     setLoading(false);
   };
+
+  if (isForgotPassword) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div className="absolute inset-0 z-0 opacity-10">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--color-gold)_0%,_transparent_70%)]" />
+        </div>
+        
+        <div className="w-full max-w-md relative z-10">
+          <div className="text-center mb-8 space-y-4">
+            <button onClick={() => setIsForgotPassword(false)} className="inline-flex items-center gap-2 text-gold hover:text-gold-light transition-colors mb-4">
+              <ArrowLeft className="w-4 h-4" />
+              Back to Portal
+            </button>
+            <div className="w-20 h-20 bg-gold rounded-full flex items-center justify-center mx-auto shadow-[0_0_30px_rgba(212,175,55,0.3)]">
+              <Lock className="text-background w-10 h-10" />
+            </div>
+            <h1 className="text-3xl font-bold text-white">Reset Credentials</h1>
+            <p className="text-muted-foreground">Request a secure password reset link.</p>
+          </div>
+
+          <form onSubmit={handleForgotPassword} className="bg-secondary/30 border border-white/10 p-8 rounded-3xl backdrop-blur-xl space-y-6">
+            {resetSent ? (
+              <div className="text-center space-y-4 py-8">
+                <CheckCircle2 className="w-12 h-12 text-green-500 mx-auto" />
+                <h3 className="text-xl font-bold text-white">Protocol Initiated</h3>
+                <p className="text-gray-400 text-sm">A secure reset link has been dispatched to {formData.email}. Please verify your inbox.</p>
+                <Button onClick={() => setIsForgotPassword(false)} className="w-full bg-gold text-black mt-4">Return to Login</Button>
+              </div>
+            ) : (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="resetEmail" className="text-white font-bold uppercase tracking-widest text-xs">Client ID / Email</Label>
+                  <Input 
+                    id="resetEmail" 
+                    type="email" 
+                    required 
+                    value={formData.email}
+                    onChange={(e) => setFormData({...formData, email: e.target.value})}
+                    className="bg-background/50 border-white/10 text-white h-12" 
+                  />
+                </div>
+                <Button 
+                  type="submit"
+                  disabled={loading}
+                  className="w-full bg-gold hover:bg-gold-dark text-background font-bold h-14 text-lg gap-2"
+                >
+                  {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Lock className="w-5 h-5" />}
+                  SEND RESET LINK
+                </Button>
+              </>
+            )}
+          </form>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -194,7 +292,13 @@ export function ClientPortal() {
             >
               {isLogin ? "Request security credentials?" : "Return to authentication"}
             </button>
-            <a href="#" className="text-muted-foreground text-xs hover:text-white transition-colors">Forgot security credentials?</a>
+            <button 
+              type="button"
+              onClick={() => setIsForgotPassword(true)}
+              className="text-muted-foreground text-xs hover:text-white transition-colors block w-full"
+            >
+              Forgot security credentials?
+            </button>
           </div>
         </form>
         
