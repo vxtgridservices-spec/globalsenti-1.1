@@ -94,9 +94,23 @@ function AuthListener() {
   const location = useLocation();
 
   useEffect(() => {
+    // Proactive check for recovery tokens in URL
+    const isRecovery = window.location.hash.includes('type=recovery') || 
+                      window.location.search.includes('type=recovery');
+    
+    if (isRecovery && location.pathname !== '/reset-password') {
+      console.log("Recovery flow detected from URL, redirecting to /reset-password");
+      navigate('/reset-password');
+    }
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log("Auth Event:", event);
       
+      if (event === 'PASSWORD_RECOVERY') {
+        console.log("PASSWORD_RECOVERY event triggered, ensuring /reset-password");
+        navigate('/reset-password');
+      }
+
       if (event === 'SIGNED_OUT') {
         // Sign out clear local storage automatically
         console.log("User signed out");

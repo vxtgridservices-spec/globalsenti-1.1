@@ -15,6 +15,19 @@ export default function ResetPassword() {
   const [loading, setLoading] = React.useState(false);
   const [success, setSuccess] = React.useState(false);
 
+  React.useEffect(() => {
+    const initAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      // If we don't have a session AND the hash doesn't have an access token, 
+      // then we are likely in an invalid state for password reset.
+      if (!session && !window.location.hash.includes('access_token')) {
+        toast.error("Access expired. Please initiate a new password recovery request.");
+        navigate("/portal");
+      }
+    };
+    initAuth();
+  }, [navigate]);
+
   const handleReset = async (e: React.FormEvent) => {
     e.preventDefault();
     

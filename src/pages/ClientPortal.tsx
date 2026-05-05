@@ -22,6 +22,30 @@ export function ClientPortal() {
   });
   const navigate = useNavigate();
 
+  React.useEffect(() => {
+    const checkSession = async () => {
+      // Check if we are in recovery mode first
+      const isRecovery = window.location.hash.includes('type=recovery') || 
+                        window.location.search.includes('type=recovery');
+      
+      if (isRecovery) return; // Exit and let App.tsx handle the reset routing
+
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("id", session.user.id)
+          .single();
+        
+        if (profile?.role === 'admin') navigate('/admin');
+        else if (profile?.role === 'broker') navigate('/broker');
+        else navigate('/dashboard');
+      }
+    };
+    checkSession();
+  }, [navigate]);
+
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.email) {
