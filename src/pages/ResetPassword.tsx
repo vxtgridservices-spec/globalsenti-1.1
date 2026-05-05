@@ -16,56 +16,53 @@ export default function ResetPassword() {
   const [success, setSuccess] = React.useState(false);
 
   const [verifying, setVerifying] = React.useState(true);
-  // Capture recovery intent immediately on mount before fragment is consumed
-  const [initialRecoveryCheck] = React.useState(() => {
-    return window.location.hash.includes('type=recovery') || 
-           window.location.hash.includes('access_token') ||
-           window.location.search.includes('type=recovery');
-  });
 
   React.useEffect(() => {
     let mounted = true;
 
     const initAuth = async () => {
-      // Give the auth listener a window to initialize from URL fragment
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      if (!mounted) return;
-
+      // Check current session
       const { data: { session } } = await supabase.auth.getSession();
       
-      // If we have a session, we are good.
-      // If we don't have a session, we check if we PREVIOUSLY saw recovery flags
-      if (!session && !initialRecoveryCheck) {
-        toast.error("Access link invalid or expired. Please initiate a new recovery request.");
-        navigate("/portal");
-      } else if (session) {
-        setVerifying(false);
+      if (session) {
+        if (mounted) setVerifying(false);
+        return;
       }
-      // If none of the above, we stay in 'verifying' state waiting for the event
+
+      // Check if we have recovery tokens in the URL (means App.tsx handleAuthRedirect is still working)
+      const hasTokens = window.location.hash.includes('access_token') || 
+                        window.location.search.includes('type=recovery');
+
+      if (!hasTokens) {
+        toast.error("Invalid or expired session. Please request a new link.");
+        navigate("/portal");
+      }
     };
 
     initAuth();
 
-    // Listen for auth state changes specifically for recovery
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log("ResetPassword Auth Event:", event);
-      if (event === 'PASSWORD_RECOVERY' || (event === 'SIGNED_IN' && session)) {
-        if (mounted) setVerifying(false);
+      if (mounted && (event === 'PASSWORD_RECOVERY' || (event === 'SIGNED_IN' && session))) {
+        setVerifying(false);
       }
     });
 
-    // Safety timeout: if after 5 seconds we still don't have a session, fail
-    const timer = setTimeout(() => {
+    // If still verifying after 5 seconds, check one last time
+    const timer = setTimeout(async () => {
       if (mounted && verifying) {
-        supabase.auth.getSession().then(({ data: { session } }) => {
-          if (!session && mounted) {
-            toast.error("Security session timeout. Please try again.");
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          setVerifying(false);
+        } else {
+          // One final check: if we came here from a recovery link, we MIGHT be verified but Supabase is slow
+          // Let's check if we can skip the error if hash was present
+          if (!window.location.hash.includes('access_token')) {
+            toast.error("Security session timeout.");
             navigate("/portal");
           }
-        });
+        }
       }
-    }, 8000);
+    }, 5000);
 
     return () => {
       mounted = false;

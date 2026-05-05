@@ -94,21 +94,38 @@ function AuthListener() {
   const location = useLocation();
 
   useEffect(() => {
-    // Proactive check for recovery tokens in URL
-    const isRecovery = window.location.hash.includes('type=recovery') || 
-                      window.location.search.includes('type=recovery');
-    
-    if (isRecovery && location.pathname !== '/reset-password') {
-      console.log("Recovery flow detected from URL, redirecting to /reset-password");
-      navigate('/reset-password');
-    }
+    const handleAuthRedirect = async () => {
+      // Manually parse tokens from hash (Supabase puts them after #)
+      const hash = window.location.hash;
+      const params = new URLSearchParams(hash.slice(1));
+      const accessToken = params.get('access_token');
+      const refreshToken = params.get('refresh_token');
+      const type = params.get('type');
+
+      // If we see tokens in the URL hash, set the session manually immediately
+      if (accessToken && refreshToken && type === 'recovery') {
+        console.log("Manual token recovery initiated from URL hash...");
+        await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken
+        });
+        navigate('/reset-password', { replace: true });
+        return;
+      }
+
+      // Check for search params fallback
+      if (window.location.search.includes('type=recovery')) {
+        navigate('/reset-password', { replace: true });
+      }
+    };
+
+    handleAuthRedirect();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log("Auth Event:", event);
+      console.log("Global Auth Event:", event);
       
       if (event === 'PASSWORD_RECOVERY') {
-        console.log("PASSWORD_RECOVERY event triggered, ensuring /reset-password");
-        navigate('/reset-password');
+        navigate('/reset-password', { replace: true });
       }
 
       if (event === 'SIGNED_OUT') {
@@ -134,12 +151,17 @@ function AuthListener() {
 
     // Check session on mount to catch "Refresh Token Not Found" early
     const checkSession = async () => {
+      const isRecovery = window.location.hash.includes('type=recovery') || 
+                        window.location.search.includes('type=recovery') ||
+                        window.location.hash.includes('access_token');
+      
       const { error } = await supabase.auth.getSession();
       if (error && error.message.includes("Refresh Token Not Found")) {
         console.error("Critical Auth Error:", error.message);
+        if (isRecovery) return; // Don't disrupt recovery flow
         await supabase.auth.signOut();
         // Redirect to login if on a protected route
-        if (location.pathname !== '/' && location.pathname !== '/portal') {
+        if (location.pathname !== '/' && location.pathname !== '/portal' && location.pathname !== '/reset-password') {
           navigate('/portal');
         }
       }
