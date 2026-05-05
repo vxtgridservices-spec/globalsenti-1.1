@@ -184,6 +184,52 @@ export const roiUpdateTemplate = (data: {
 
 // --- Authentication Templates ---
 
+export const consultationResponseTemplate = (data: {
+  userName: string;
+  inquiryType: string;
+  message: string;
+  portalLink: string;
+}) => baseEmailTemplate(`
+    <div style="text-align: center; margin-bottom: 30px;">
+        <div style="display: inline-block; padding: 10px 20px; background-color: rgba(212, 175, 55, 0.1); border-radius: 50px; margin-bottom: 20px;">
+            <span style="color: #D4AF37; font-weight: bold; font-size: 12px; letter-spacing: 2px; text-transform: uppercase;">Official Response: ${data.inquiryType}</span>
+        </div>
+        <h1 style="margin-top: 0;">Consultation Update</h1>
+        <p>Dear ${data.userName},</p>
+        <p>A Senior Advisor from Global Sentinel Group has reviewed your inquiry and provided a formal response.</p>
+    </div>
+    
+    <div style="background-color: #0c0c0c; border-left: 4px solid #D4AF37; padding: 25px; margin: 30px 0;">
+        <p style="margin: 0; color: #ffffff; font-size: 14px; line-height: 1.6; font-style: italic;">"${data.message}"</p>
+    </div>
+    
+    <div style="text-align: center; margin: 35px 0;">
+        <a href="${data.portalLink}" style="background-color: #D4AF37; color: #000000; padding: 14px 35px; text-decoration: none; border-radius: 4px; font-weight: 800; font-size: 13px; text-transform: uppercase; display: inline-block; letter-spacing: 1px;">Access Secure Portal</a>
+    </div>
+    
+    <p style="font-size: 12px; color: #666666; text-align: center;">For security reasons, do not reply directly to this email. Please use the encrypted messaging system within the portal for all future correspondence.</p>
+`);
+
+export const administrativeBroadcastTemplate = (data: {
+  subject: string;
+  message: string;
+}) => baseEmailTemplate(`
+    <div style="margin-bottom: 30px;">
+        <div style="display: inline-block; padding: 8px 15px; background-color: #D4AF37; border-radius: 4px; margin-bottom: 20px;">
+            <span style="color: #000000; font-weight: 900; font-size: 10px; letter-spacing: 2px; text-transform: uppercase;">Direct Intelligence Bulletin</span>
+        </div>
+        <h1 style="margin-top: 0; font-size: 24px;">${data.subject}</h1>
+    </div>
+    
+    <div style="color: #ffffff; font-size: 15px; line-height: 1.8; margin-bottom: 40px;">
+        ${data.message.split('\n').map(p => p ? `<p>${p}</p>` : '').join('')}
+    </div>
+    
+    <div style="padding: 20px; border: 1px solid #333333; border-radius: 8px; background-color: rgba(255,255,255,0.02);">
+        <p style="margin: 0; font-size: 11px; color: #888888; text-transform: uppercase; font-weight: bold; letter-spacing: 1px;">Global Sentinel Group | Compliance & Communications</p>
+    </div>
+`);
+
 export const verificationEmailTemplate = (data: {
   userName: string;
   verificationLink: string;

@@ -39,6 +39,7 @@ import { TransactionsHistory } from "./pages/investments/TransactionsHistory";
 import { LedgerVerification } from "./pages/investments/LedgerVerification";
 import { AdminInvestments } from "./pages/admin/AdminInvestments";
 import { AdminSecurity } from "./pages/admin/AdminSecurity";
+import { AdminCommunications } from "./pages/admin/AdminCommunications";
 import { ActivityCenter } from "./pages/ActivityCenter";
 
 import { ChemicalLandingPage } from "./pages/chemicals/ChemicalLandingPage";
@@ -181,6 +182,7 @@ export default function App() {
         <Route path="/transactions" element={<TransactionsHistory />} />
         <Route path="/investments/ledger/:id" element={<LedgerVerification />} />
         <Route path="/admin/investments" element={<AdminInvestments />} />
+        <Route path="/admin/communications" element={<AdminCommunications />} />
         <Route path="/admin/security" element={<AdminSecurity />} />
         <Route path="/activity-center" element={<ActivityCenter />} />
         

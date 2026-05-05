@@ -13,7 +13,8 @@ import {
   X,
   Loader2,
   TrendingUp,
-  FlaskConical
+  FlaskConical,
+  Mail
 } from "lucide-react";
 import { Button } from "@/src/components/ui/button";
 import { cn } from "@/src/lib/utils";
@@ -69,6 +70,7 @@ export function AdminLayout({ children, title, icon: Icon }: AdminLayoutProps) {
     { label: "Documents", icon: FileText, path: "/admin/documents" },
     { label: "Investments", icon: TrendingUp, path: "/admin/investments" },
     { label: "Chemicals", icon: FlaskConical, path: "/admin/chemicals" },
+    { label: "Communications", icon: Mail, path: "/admin/communications" },
     { label: "Security", icon: ShieldCheck, path: "/admin/security" },
   ];
 

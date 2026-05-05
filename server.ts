@@ -156,6 +156,14 @@ async function startServer() {
           html = templates.dealRejectedTemplate(data);
           subject = "Transaction Closed";
           break;
+        case "consultation-response":
+          html = templates.consultationResponseTemplate(data);
+          subject = `Response to Inquiry: ${data.inquiryType || 'General'}`;
+          break;
+        case "administrative-broadcast":
+          html = templates.administrativeBroadcastTemplate(data);
+          subject = data.subject || "Global Sentinel Group Communication";
+          break;
         default:
           return res.status(400).json({ error: "Invalid email type" });
       }
@@ -214,6 +222,65 @@ async function startServer() {
     } catch (error: any) {
       console.error("Registration error:", error);
       res.status(400).json({ success: false, error: error.message });
+    }
+  });
+
+  // Administrative Broadcast API
+  app.post("/api/admin/broadcast", adminAuth, async (req, res) => {
+    const { subject, message, targetUsers } = req.body; // targetUsers is optional array of emails
+    
+    try {
+      const resend = getResend();
+      if (!resend) return res.status(500).json({ error: "Email service disabled" });
+
+      let recipients: string[] = [];
+      
+      if (targetUsers && Array.isArray(targetUsers) && targetUsers.length > 0) {
+        recipients = targetUsers;
+      } else {
+        // Fetch all user emails from Supabase
+        const { data: profiles, error } = await supabaseAdmin
+          .from("profiles")
+          .select("email")
+          .not("email", "is", null);
+          
+        if (error) throw error;
+        recipients = profiles.map(p => p.email);
+      }
+
+      // Filter out invalid emails
+      recipients = recipients.filter(email => email && email.includes("@"));
+
+      if (recipients.length === 0) {
+        return res.status(400).json({ error: "No valid recipients found" });
+      }
+
+      // Resend allows multiple recipients in one call depending on plan, 
+      // but individual emails are better for personalization if templates supported it.
+      // For broadcast, we use the administrativeBroadcastTemplate.
+      
+      const emailResults = await Promise.all(recipients.map(async (email) => {
+        try {
+          return await resend.emails.send({
+            from: SENDER,
+            to: email,
+            subject: subject,
+            html: templates.administrativeBroadcastTemplate({ subject, message })
+          });
+        } catch (e) {
+          console.error(`Failed to send broadcast to ${email}:`, e);
+          return null;
+        }
+      }));
+
+      res.json({ 
+        success: true, 
+        deliveredCount: emailResults.filter(r => r !== null).length,
+        totalAttempted: recipients.length 
+      });
+    } catch (error: any) {
+      console.error("Broadcast failed:", error);
+      res.status(500).json({ error: error.message });
     }
   });
 

@@ -160,9 +160,33 @@ export function AdminConsultations() {
         message: `[SYSTEM RESPONSE] ${replyText.trim()}`
       }]);
       if (error) throw error;
+      
+      // Trigger Professional Response Email via Resend Protocol
+      try {
+        const response = await fetch('/api/email/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'consultation-response',
+            recipientEmail: selectedInquiry.metadata?.email,
+            data: {
+              userName: selectedInquiry.name || selectedInquiry.metadata?.sender_name || 'Valued Client',
+              inquiryType: selectedInquiry.metadata?.commodity || 'General Consultation',
+              message: replyText.trim(),
+              portalLink: `${window.location.origin}/portal`
+            }
+          })
+        });
+        
+        if (!response.ok) {
+           console.warn("[SECURITY ALERT] Email protocol dispatch failed, but message logged in secure vault.");
+        }
+      } catch (emailErr) {
+        console.error("Consultation email dispatch error:", emailErr);
+      }
 
       await handleStatusUpdate(selectedInquiry.id, 'contacted');
-      toast.success("Secure response transmitted.");
+      toast.success("Secure response transmitted and emailed.");
       setReplyText("");
       fetchHistory(selectedInquiry.id); // Refresh logs
     } catch (err) {
