@@ -16,36 +16,62 @@ export default function ResetPassword() {
   const [success, setSuccess] = React.useState(false);
 
   const [verifying, setVerifying] = React.useState(true);
+  // Capture recovery intent immediately on mount before fragment is consumed
+  const [initialRecoveryCheck] = React.useState(() => {
+    return window.location.hash.includes('type=recovery') || 
+           window.location.hash.includes('access_token') ||
+           window.location.search.includes('type=recovery');
+  });
 
   React.useEffect(() => {
+    let mounted = true;
+
     const initAuth = async () => {
-      // Give the auth listener a small window to initialize from URL fragment
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Give the auth listener a window to initialize from URL fragment
+      await new Promise(resolve => setTimeout(resolve, 1500));
       
+      if (!mounted) return;
+
       const { data: { session } } = await supabase.auth.getSession();
       
-      // Check if we are clearly in a recovery flow (token in hash/search)
-      const isRecoveryFlow = window.location.hash.includes('type=recovery') || 
-                             window.location.hash.includes('access_token') ||
-                             window.location.search.includes('type=recovery');
-
-      if (!session && !isRecoveryFlow) {
-        toast.error("Access expired or invalid. Please initiate a new password recovery request.");
+      // If we have a session, we are good.
+      // If we don't have a session, we check if we PREVIOUSLY saw recovery flags
+      if (!session && !initialRecoveryCheck) {
+        toast.error("Access link invalid or expired. Please initiate a new recovery request.");
         navigate("/portal");
-      } else {
+      } else if (session) {
         setVerifying(false);
       }
+      // If none of the above, we stay in 'verifying' state waiting for the event
     };
+
     initAuth();
 
     // Listen for auth state changes specifically for recovery
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log("ResetPassword Auth Event:", event);
       if (event === 'PASSWORD_RECOVERY' || (event === 'SIGNED_IN' && session)) {
-        setVerifying(false);
+        if (mounted) setVerifying(false);
       }
     });
 
-    return () => subscription.unsubscribe();
+    // Safety timeout: if after 5 seconds we still don't have a session, fail
+    const timer = setTimeout(() => {
+      if (mounted && verifying) {
+        supabase.auth.getSession().then(({ data: { session } }) => {
+          if (!session && mounted) {
+            toast.error("Security session timeout. Please try again.");
+            navigate("/portal");
+          }
+        });
+      }
+    }, 8000);
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+      clearTimeout(timer);
+    };
   }, [navigate]);
 
   const handleReset = async (e: React.FormEvent) => {
