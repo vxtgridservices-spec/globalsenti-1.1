@@ -15,17 +15,37 @@ export default function ResetPassword() {
   const [loading, setLoading] = React.useState(false);
   const [success, setSuccess] = React.useState(false);
 
+  const [verifying, setVerifying] = React.useState(true);
+
   React.useEffect(() => {
     const initAuth = async () => {
+      // Give the auth listener a small window to initialize from URL fragment
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
       const { data: { session } } = await supabase.auth.getSession();
-      // If we don't have a session AND the hash doesn't have an access token, 
-      // then we are likely in an invalid state for password reset.
-      if (!session && !window.location.hash.includes('access_token')) {
-        toast.error("Access expired. Please initiate a new password recovery request.");
+      
+      // Check if we are clearly in a recovery flow (token in hash/search)
+      const isRecoveryFlow = window.location.hash.includes('type=recovery') || 
+                             window.location.hash.includes('access_token') ||
+                             window.location.search.includes('type=recovery');
+
+      if (!session && !isRecoveryFlow) {
+        toast.error("Access expired or invalid. Please initiate a new password recovery request.");
         navigate("/portal");
+      } else {
+        setVerifying(false);
       }
     };
     initAuth();
+
+    // Listen for auth state changes specifically for recovery
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY' || (event === 'SIGNED_IN' && session)) {
+        setVerifying(false);
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, [navigate]);
 
   const handleReset = async (e: React.FormEvent) => {
@@ -79,6 +99,17 @@ export default function ResetPassword() {
             <p className="text-sm text-gold animate-pulse">Redirecting to secure portal...</p>
           </CardContent>
         </Card>
+      </div>
+    );
+  }
+
+  if (verifying) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div className="text-center space-y-4">
+          <Loader2 className="w-12 h-12 text-gold animate-spin mx-auto" />
+          <p className="text-gold font-black uppercase tracking-[0.2em] text-xs">Authenticating Recovery Protocol...</p>
+        </div>
       </div>
     );
   }
