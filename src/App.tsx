@@ -41,6 +41,7 @@ import { AdminInvestments } from "./pages/admin/AdminInvestments";
 import { AdminSecurity } from "./pages/admin/AdminSecurity";
 import { AdminCommunications } from "./pages/admin/AdminCommunications";
 import { ActivityCenter } from "./pages/ActivityCenter";
+import ResetPassword from "./pages/ResetPassword";
 
 import { ChemicalLandingPage } from "./pages/chemicals/ChemicalLandingPage";
 import { ChemicalCatalog } from "./pages/chemicals/ChemicalCatalog";
@@ -184,6 +185,7 @@ export default function App() {
         <Route path="/admin/investments" element={<AdminInvestments />} />
         <Route path="/admin/communications" element={<AdminCommunications />} />
         <Route path="/admin/security" element={<AdminSecurity />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/activity-center" element={<ActivityCenter />} />
         
         <Route path="/chemicals" element={<ChemicalLandingPage />} />

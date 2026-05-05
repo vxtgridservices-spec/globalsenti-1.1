@@ -225,6 +225,47 @@ async function startServer() {
     }
   });
 
+  // Password Reset Proxy with Resend
+  app.post("/api/auth/request-reset", async (req, res) => {
+    const { email } = req.body;
+
+    try {
+      const { data: profile } = await supabaseAdmin
+        .from("profiles")
+        .select("full_name")
+        .eq("email", email)
+        .single();
+
+      const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
+        type: 'recovery',
+        email: email,
+        options: {
+           redirectTo: `${req.headers.origin}/reset-password`
+        }
+      });
+
+      if (linkError) throw linkError;
+
+      const resend = getResend();
+      if (resend) {
+        await resend.emails.send({
+          from: SENDER,
+          to: email,
+          subject: "Reset Your Global Sentinel Credentials",
+          html: templates.passwordResetTemplate({
+            userName: profile?.full_name || 'Valued Client',
+            resetLink: linkData.properties.action_link
+          }),
+        });
+      }
+
+      res.json({ success: true, message: "Security reset protocol initiated. Check your inbox." });
+    } catch (error: any) {
+      console.error("Reset request error:", error);
+      res.status(400).json({ success: false, error: error.message });
+    }
+  });
+
   // Administrative Broadcast API
   app.post("/api/admin/broadcast", adminAuth, async (req, res) => {
     const { subject, message, targetUsers } = req.body; // targetUsers is optional array of emails

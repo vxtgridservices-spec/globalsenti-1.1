@@ -30,20 +30,14 @@ export function ClientPortal() {
     }
     setLoading(true);
     try {
-      const { data: profile } = await supabase.from('profiles').select('full_name').eq('email', formData.email).single();
-      
-      const { error } = await supabase.auth.resetPasswordForEmail(formData.email, {
-        redirectTo: `${window.location.origin}/portal?reset=true`,
+      const response = await fetch('/api/auth/request-reset', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: formData.email }),
       });
       
-      if (error) throw error;
-
-      // Trigger Password Reset Email
-      await sendTransactionalEmail('password-reset', formData.email, {
-        userName: profile?.full_name || 'Valued Client',
-        resetLink: `${window.location.origin}/portal?reset=true`,
-        timestamp: new Date().toLocaleString(),
-      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Reset protocol failed.");
 
       setResetSent(true);
       toast.success("Security reset protocol initiated. Check your email.");
