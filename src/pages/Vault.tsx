@@ -144,7 +144,7 @@ export function Vault() {
   };
 
   return (
-    <PageLayout title="Document Vault" subtitle="Secure repository for compliance, legal, and corporate documentation.">
+    <PageLayout title="Document Vault" subtitle="Secure repository for compliance, legal, and corporate documentation." hideFooter={true}>
       <div className="container mx-auto px-4 py-12">
         <div className="flex flex-col md:flex-row justify-between items-center gap-6 mb-12">
           <div className="relative w-full md:w-96">

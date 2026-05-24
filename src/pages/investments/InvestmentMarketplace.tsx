@@ -170,6 +170,7 @@ export function InvestmentMarketplace() {
     <PageLayout 
       title="Commodity Investments" 
       subtitle="Institutional-grade managed commodity investment products for strategic capital allocation."
+      hideFooter={true}
     >
       <div className="container mx-auto px-4 py-8">
         {/* Market Overview Stats */}

@@ -597,16 +597,6 @@ export function AdminInvestments() {
         }
 
         if (status === 'Completed') {
-            // 1. Log redemption transaction
-            await supabase.from('investor_transactions').insert({
-                user_id: request.user_id,
-                position_id: request.position_id,
-                type: 'redemption',
-                amount: request.amount,
-                description: `Liquidity redemption completed for ${request.position?.product?.name}`,
-                metadata: { request_id: request.id }
-            });
-
             // 2. Return units to the product pool
             if (request.position?.product_id && request.units) {
                 const { data: prod } = await supabase
@@ -620,6 +610,46 @@ export function AdminInvestments() {
                         .from('investment_products')
                         .update({ units_available: prod.units_available + request.units })
                         .eq('id', request.position.product_id);
+                }
+            }
+
+            // 3. Update investor position (reduce units and total_invested, set status to 'Closed' if 0)
+            if (request.position_id && request.units) {
+                const { data: pos } = await supabase
+                    .from('investor_positions')
+                    .select('units, total_invested')
+                    .eq('id', request.position_id)
+                    .single();
+                
+                if (pos) {
+                    const currentUnits = pos.units || 0;
+                    const currentInvested = Number(pos.total_invested) || 0;
+                    
+                    const newUnits = Math.max(0, currentUnits - request.units);
+                    let newInvested = 0;
+                    if (newUnits > 0 && currentUnits > 0) {
+                        // Calculate unit price from original investment
+                        const originalUnitPrice = currentInvested / currentUnits;
+                        newInvested = Math.max(0, currentInvested - (request.units * originalUnitPrice));
+                    }
+                    
+                    const updatePayload: any = {
+                        units: newUnits,
+                        total_invested: newInvested
+                    };
+                    
+                    if (newUnits === 0) {
+                        updatePayload.status = 'Closed';
+                    }
+                    
+                    const { error: posUpdateError } = await supabase
+                        .from('investor_positions')
+                        .update(updatePayload)
+                        .eq('id', request.position_id);
+                    
+                    if (posUpdateError) {
+                        console.error("Failed to update investor position on completion:", posUpdateError);
+                    }
                 }
             }
         }

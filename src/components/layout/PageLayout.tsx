@@ -7,9 +7,10 @@ interface PageLayoutProps {
   children: React.ReactNode;
   title: string;
   subtitle?: string;
+  hideFooter?: boolean;
 }
 
-export function PageLayout({ children, title, subtitle }: PageLayoutProps) {
+export function PageLayout({ children, title, subtitle, hideFooter = false }: PageLayoutProps) {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Navbar />
@@ -34,12 +35,12 @@ export function PageLayout({ children, title, subtitle }: PageLayoutProps) {
           </motion.div>
         </div>
       </section>
-
+      
       <main className="flex-grow">
         {children}
       </main>
 
-      <Footer />
+      {!hideFooter && <Footer />}
     </div>
   );
 }

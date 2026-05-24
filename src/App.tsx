@@ -149,20 +149,35 @@ function AuthListener() {
       }
     });
 
+    // Check for old session keys and remove them if they exist
+    if (localStorage.getItem('sentinel-secure-session-v1')) {
+      console.warn("Removing old session storage key...");
+      localStorage.removeItem('sentinel-secure-session-v1');
+      localStorage.removeItem('lock:sentinel-secure-session-v1');
+    }
+    
     // Check session on mount to catch "Refresh Token Not Found" early
     const checkSession = async () => {
       const isRecovery = window.location.hash.includes('type=recovery') || 
                         window.location.search.includes('type=recovery') ||
                         window.location.hash.includes('access_token');
       
-      const { error } = await supabase.auth.getSession();
-      if (error && error.message.includes("Refresh Token Not Found")) {
-        console.error("Critical Auth Error:", error.message);
-        if (isRecovery) return; // Don't disrupt recovery flow
-        await supabase.auth.signOut();
-        // Redirect to login if on a protected route
-        if (location.pathname !== '/' && location.pathname !== '/portal' && location.pathname !== '/reset-password') {
-          navigate('/portal');
+      try {
+        const { error } = await supabase.auth.getSession();
+        if (error && error.message.includes("Refresh Token Not Found")) {
+          console.error("Critical Auth Error:", error.message);
+          if (isRecovery) return; // Don't disrupt recovery flow
+          await supabase.auth.signOut();
+          // Redirect to login if on a protected route
+          if (location.pathname !== '/' && location.pathname !== '/portal' && location.pathname !== '/reset-password') {
+            navigate('/portal');
+          }
+        }
+      } catch (err: any) {
+        if (err.message && err.message.includes("lock")) {
+           console.warn("Supabase lock error, ignoring...");
+        } else {
+           console.error("Session check error:", err);
         }
       }
     };

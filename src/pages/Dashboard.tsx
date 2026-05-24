@@ -21,7 +21,6 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { Navbar } from "@/src/components/layout/Navbar";
-import { Footer } from "@/src/components/layout/Footer";
 import { 
   Dialog, 
   DialogContent, 
@@ -608,8 +607,6 @@ export function Dashboard() {
           </div>
         </div>
       </main>
-
-      <Footer />
 
       {/* Secure Messaging Modal */}
       <Dialog open={isMessageModalOpen} onOpenChange={setIsMessageModalOpen}>

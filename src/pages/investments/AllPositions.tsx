@@ -31,9 +31,10 @@ export function AllPositions() {
             
             if (posData) {
                 console.log("Positions fetched:", posData);
-                setPositions(posData);
+                const activePosData = posData.filter(p => p.status !== 'Closed' && p.units > 0);
+                setPositions(activePosData);
                 
-                const productIds = posData.map(p => p.product_id);
+                const productIds = activePosData.map(p => p.product_id);
                 if (productIds.length > 0) {
                     const [perfRes, priceRes] = await Promise.all([
                         supabase.from('performance_updates')
@@ -76,7 +77,7 @@ export function AllPositions() {
   );
 
   return (
-    <PageLayout title="All Active Positions" subtitle="Your complete direct investment portfolio.">
+    <PageLayout title="All Active Positions" subtitle="Your complete direct investment portfolio." hideFooter={true}>
       <div className="px-6 py-12">
         <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <h3 className="text-xl md:text-2xl font-serif text-white">Full Portfolio</h3>

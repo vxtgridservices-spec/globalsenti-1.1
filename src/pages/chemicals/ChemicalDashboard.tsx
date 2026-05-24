@@ -248,14 +248,14 @@ export function ChemicalDashboard() {
 
     if (loading) {
         return (
-            <PageLayout title="Client Dashboard" subtitle="Chemical Division">
+            <PageLayout title="Client Dashboard" subtitle="Chemical Division" hideFooter={true}>
                 <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-gold" /></div>
             </PageLayout>
         );
     }
 
     return (
-        <PageLayout title="Chemical Operations" subtitle="Manage your industrial allocations and orders.">
+        <PageLayout title="Chemical Operations" subtitle="Manage your industrial allocations and orders." hideFooter={true}>
             <AccessGuard section="chemicals">
                 <div className="container mx-auto px-4 py-8">
                     <div className="space-y-8">

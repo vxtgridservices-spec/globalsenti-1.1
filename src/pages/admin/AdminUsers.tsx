@@ -28,7 +28,8 @@ import {
   Calendar,
   Gem,
   Award,
-  Crown
+  Crown,
+  LogOut
 } from "lucide-react";
 
 import { supabase } from "@/src/lib/supabase";
@@ -109,6 +110,29 @@ export function AdminUsers() {
     } catch (error: any) {
       console.error("Error updating user role:", error);
       toast.error("Failed to update role: " + error.message);
+    }
+  };
+
+  const handleImpersonate = async (email: string) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("No active session");
+      
+      const response = await fetch('/api/admin/impersonate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({ email })
+      });
+      
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Failed to impersonate");
+      
+      window.open(result.action_link, '_blank');
+    } catch (error: any) {
+      toast.error("Impersonation failed: " + error.message);
     }
   };
 
@@ -226,6 +250,15 @@ export function AdminUsers() {
                             onClick={() => handleStatusUpdate(user.id, 'rejected')}
                           >
                             <UserX className="w-4 h-4" />
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            size="icon" 
+                            className="bg-gold/10 border border-gold/50 text-gold hover:bg-gold/20"
+                            onClick={() => handleImpersonate(user.email)}
+                            title="Impersonate User"
+                          >
+                            <LogOut className="w-4 h-4 rotate-180" />
                           </Button>
                           <Button variant="ghost" size="icon" className="text-gray-400 hover:text-white">
                             <MoreVertical className="w-4 h-4" />

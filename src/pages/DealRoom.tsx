@@ -220,7 +220,7 @@ export function DealRoom() {
   
   return (
     <AccessGuard section="deals">
-    <PageLayout title="Private Deal Room" subtitle="Exclusive high-value commodity opportunities for verified partners.">
+    <PageLayout title="Private Deal Room" subtitle="Exclusive high-value commodity opportunities for verified partners." hideFooter={true}>
       <div className="container mx-auto px-4 py-12">
         <div className="bg-gold/10 border border-gold/20 rounded-xl p-6 mb-12 flex flex-col md:flex-row items-center gap-6">
           <div className="w-16 h-16 bg-gold rounded-full flex items-center justify-center shrink-0">

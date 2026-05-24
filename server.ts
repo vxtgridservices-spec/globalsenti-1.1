@@ -227,7 +227,7 @@ async function startServer() {
 
   // Password Reset Proxy with Resend
   app.post("/api/auth/request-reset", async (req, res) => {
-    const { email } = req.body;
+    const email = req.body.email?.toLowerCase().trim();
 
     try {
       const { data: profile } = await supabaseAdmin
@@ -244,7 +244,12 @@ async function startServer() {
         }
       });
 
-      if (linkError) throw linkError;
+      if (linkError) {
+        if (linkError.message === 'User with this email not found') {
+            throw new Error("This email is not registered in our system.");
+        }
+        throw linkError;
+      }
 
       const resend = getResend();
       if (resend) {
@@ -321,6 +326,32 @@ async function startServer() {
       });
     } catch (error: any) {
       console.error("Broadcast failed:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Admin Impersonation API
+  app.post("/api/admin/impersonate", adminAuth, async (req, res) => {
+    const { email } = req.body;
+    
+    try {
+      // Use the known development URL directly to avoid origin issues
+      const redirectTo = 'https://ais-dev-cot63cwmekq5ezfnjvzw7a-312660336843.europe-west1.run.app/portal';
+      console.log("Attempting impersonation redirect to:", redirectTo);
+      
+      const { data, error } = await supabaseAdmin.auth.admin.generateLink({
+        type: 'magiclink',
+        email: email,
+        options: {
+          redirectTo: redirectTo
+        }
+      });
+      
+      if (error) throw error;
+      
+      res.json({ action_link: data.properties.action_link });
+    } catch (error: any) {
+      console.error("Impersonation failed:", error);
       res.status(500).json({ error: error.message });
     }
   });

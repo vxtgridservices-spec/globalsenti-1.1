@@ -625,7 +625,7 @@ export function InvestmentPortfolio() {
         setPriceHistory(priceRes.data || []);
       }
       
-      setPositions(posRes.data || []);
+      setPositions((posRes.data || []).filter(p => p.status !== 'Closed' && p.units > 0));
       setSubscriptions(subRes.data || []);
       setTransactions(txRes.data || []);
       setRedemptions(redRes.data || []);
@@ -735,8 +735,11 @@ export function InvestmentPortfolio() {
         if (!user) return;
 
         const unitsToRedeem = redemptionForm.type === 'Full' ? selectedPosition.units : redemptionForm.units;
-        const unitPrice = selectedPosition.total_invested / selectedPosition.units;
-        const amount = unitsToRedeem * unitPrice;
+        const perf = performanceData[selectedPosition.product_id];
+        const livePrice = perf?.current_nav || selectedPosition.product?.unit_price || (selectedPosition.total_invested / selectedPosition.units);
+        const liveFactor = (liveMarketVal && currentValue > 0) ? (liveMarketVal / currentValue) : 1;
+        const currentUnitPrice = livePrice * liveFactor;
+        const amount = unitsToRedeem * currentUnitPrice;
 
         // 1. Create Redemption Request
         const { data: redemptionData, error: redemptionError } = await supabase
@@ -778,7 +781,7 @@ export function InvestmentPortfolio() {
               amount: amount,
               description: `Liquidity request for ${selectedPosition.product?.name} (${unitsToRedeem} units)`,
               metadata: { 
-                  redemption_id: redemptionData.id,
+                  request_id: redemptionData.id,
                   type: redemptionForm.type
               }
           });
@@ -999,6 +1002,7 @@ export function InvestmentPortfolio() {
     <PageLayout 
       title="Investment Portfolio" 
       subtitle="Real-time performance tracking and capital management for your managed commodity positions."
+      hideFooter={true}
     >
       <div className="container mx-auto px-4 py-8">
         <Button 
@@ -1409,11 +1413,11 @@ export function InvestmentPortfolio() {
                                             {tx.type === 'redemption' && (
                                                 <span className={cn(
                                                     "text-[8px] px-1 rounded font-black uppercase tracking-tighter border",
-                                                    redemptions.find(r => r.id === tx.metadata?.redemption_id)?.status === 'Rejected' ? "border-red-500/30 text-red-500 bg-red-500/10" :
-                                                    redemptions.find(r => r.id === tx.metadata?.redemption_id)?.status === 'Completed' ? "border-green-500/30 text-green-500 bg-green-500/10" :
+                                                    redemptions.find(r => r.id === tx.metadata?.request_id)?.status === 'Rejected' ? "border-red-500/30 text-red-500 bg-red-500/10" :
+                                                    redemptions.find(r => r.id === tx.metadata?.request_id)?.status === 'Completed' ? "border-green-500/30 text-green-500 bg-green-500/10" :
                                                     "border-amber-500/30 text-amber-500 bg-amber-500/10"
                                                 )}>
-                                                    {redemptions.find(r => r.id === tx.metadata?.redemption_id)?.status || 'Pending'}
+                                                    {redemptions.find(r => r.id === tx.metadata?.request_id)?.status || 'Pending'}
                                                 </span>
                                             )}
                                         </div>
@@ -1754,7 +1758,14 @@ export function InvestmentPortfolio() {
                                     <div className="flex justify-between items-end mb-4">
                                         <span className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Estimated Payout</span>
                                         <span className="text-lg text-white font-mono font-bold">
-                                            ${(redemptionForm.units * ((currentPos?.total_invested || 0) / (currentPos?.units || 1))).toLocaleString()}
+                                            {(() => {
+                                                if (!currentPos) return "$0.00";
+                                                const perf = performanceData[currentPos.product_id];
+                                                const livePrice = perf?.current_nav || currentPos.product?.unit_price || (currentPos.total_invested / currentPos.units);
+                                                const liveFactor = (liveMarketVal && currentValue > 0) ? (liveMarketVal / currentValue) : 1;
+                                                const currentUnitPrice = livePrice * liveFactor;
+                                                return `$${(redemptionForm.units * currentUnitPrice).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                                            })()}
                                         </span>
                                     </div>
                                     <Button 

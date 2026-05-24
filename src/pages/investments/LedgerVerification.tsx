@@ -64,7 +64,7 @@ export function LedgerVerification() {
   }
 
   return (
-    <PageLayout title="Sentinel Ledger Explorer">
+    <PageLayout title="Sentinel Ledger Explorer" hideFooter={true}>
       <div className="max-w-4xl mx-auto py-12 px-4">
         <Button 
           variant="ghost" 

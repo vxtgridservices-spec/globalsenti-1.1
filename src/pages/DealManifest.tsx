@@ -441,6 +441,7 @@ export function DealManifest() {
     <PageLayout 
       title="Deal Manifest" 
       subtitle="Confidential investor-grade documentation for high-value commodity transactions."
+      hideFooter={true}
     >
       <div className="container mx-auto px-4 py-8">
         {/* Back Button */}
